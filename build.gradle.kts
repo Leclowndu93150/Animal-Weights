@@ -62,4 +62,14 @@ prism {
         }
     }
 
+    version("1.20.1") {
+        fabric {
+            loaderVersion = "0.16.10"
+            fabricApi("0.92.6+1.20.1")
+        }
+        forge {
+            loaderVersion = "47.4.0"
+        }
+    }
+
 }
