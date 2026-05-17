@@ -4,7 +4,6 @@ import com.leclowndu93150.animalweights.DisplayTracker;
 import com.leclowndu93150.animalweights.WeightAttachment;
 import com.leclowndu93150.animalweights.WeightData;
 import com.leclowndu93150.animalweights.WeightHolder;
-import com.leclowndu93150.animalweights.WeightSyncedData;
 import com.leclowndu93150.animalweights.config.AnimalWeightsConfig;
 import com.leclowndu93150.animalweights.config.ConfigManager;
 import com.leclowndu93150.animalweights.display.DisplayOverlay;
@@ -59,19 +58,12 @@ public abstract class AnimalMixin extends AgeableMob implements DisplayTracker, 
 
     @Override
     public WeightData animalweights$getWeightData() {
-        if (this.level().isClientSide && this.animalweights$weightData == null) {
-            int synced = this.entityData.get(WeightSyncedData.WEIGHT);
-            this.animalweights$weightData = new WeightData(synced, "");
-        }
         return this.animalweights$weightData;
     }
 
     @Override
     public void animalweights$setWeightData(WeightData data) {
         this.animalweights$weightData = data;
-        if (!this.level().isClientSide && data != null) {
-            this.entityData.set(WeightSyncedData.WEIGHT, data.getWeight());
-        }
     }
 
     @Override
