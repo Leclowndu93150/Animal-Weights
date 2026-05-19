@@ -31,9 +31,7 @@ public class AnimalweightsNeoForge {
         NeoForge.EVENT_BUS.addListener(AnimalweightsNeoForge::onStartTracking);
         NeoForge.EVENT_BUS.addListener(AnimalweightsNeoForge::onPlayerLoggedIn);
         NeoForge.EVENT_BUS.addListener(AnimalweightsNeoForge::onServerStopped);
-        if (FMLEnvironment.dist == Dist.CLIENT) {
-            AnimalweightsNeoForgeClient.init();
-        }
+        initClient();
 
         WeightSyncDispatcher.install(animal ->
             PacketDistributor.sendToPlayersTrackingEntity(animal,
@@ -50,11 +48,45 @@ public class AnimalweightsNeoForge {
     private static void onRegisterPayloads(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar("1");
         registrar.playToClient(WeightSyncPayload.TYPE, WeightSyncPayload.CODEC,
-            (payload, ctx) -> AnimalweightsNeoForgeClient.applyWeight(payload.entityId, payload.weight));
+            (payload, ctx) -> handleWeight(payload));
         registrar.playToClient(LootEntryPayload.TYPE, LootEntryPayload.CODEC,
-            (payload, ctx) -> AnimalweightsNeoForgeClient.applyLootEntry(payload.entityType, payload.items));
+            (payload, ctx) -> handleLootEntry(payload));
         registrar.playToClient(LootSnapshotPayload.TYPE, LootSnapshotPayload.CODEC,
-            (payload, ctx) -> AnimalweightsNeoForgeClient.applyLootSnapshot(payload.entries));
+            (payload, ctx) -> handleLootSnapshot(payload));
+    }
+
+    private static void initClient() {
+        if (FMLEnvironment.dist == Dist.CLIENT) ClientOnly.init();
+    }
+
+    private static void handleWeight(WeightSyncPayload payload) {
+        if (FMLEnvironment.dist == Dist.CLIENT) ClientOnly.applyWeight(payload);
+    }
+
+    private static void handleLootEntry(LootEntryPayload payload) {
+        if (FMLEnvironment.dist == Dist.CLIENT) ClientOnly.applyLootEntry(payload);
+    }
+
+    private static void handleLootSnapshot(LootSnapshotPayload payload) {
+        if (FMLEnvironment.dist == Dist.CLIENT) ClientOnly.applyLootSnapshot(payload);
+    }
+
+    private static final class ClientOnly {
+        private static void init() {
+            AnimalweightsNeoForgeClient.init();
+        }
+
+        private static void applyWeight(WeightSyncPayload payload) {
+            AnimalweightsNeoForgeClient.applyWeight(payload.entityId, payload.weight);
+        }
+
+        private static void applyLootEntry(LootEntryPayload payload) {
+            AnimalweightsNeoForgeClient.applyLootEntry(payload.entityType, payload.items);
+        }
+
+        private static void applyLootSnapshot(LootSnapshotPayload payload) {
+            AnimalweightsNeoForgeClient.applyLootSnapshot(payload.entries);
+        }
     }
 
     private static void onRegisterCommands(RegisterCommandsEvent event) {

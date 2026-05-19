@@ -9,10 +9,8 @@ import com.leclowndu93150.animalweights.network.WeightSyncDispatcher;
 import com.leclowndu93150.animalweights.network.WeightSyncPayload;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.animal.Animal;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
@@ -31,9 +29,6 @@ public class AnimalweightsNeoForge {
         NeoForge.EVENT_BUS.addListener(AnimalweightsNeoForge::onStartTracking);
         NeoForge.EVENT_BUS.addListener(AnimalweightsNeoForge::onPlayerLoggedIn);
         NeoForge.EVENT_BUS.addListener(AnimalweightsNeoForge::onServerStopped);
-        if (FMLEnvironment.getDist() == Dist.CLIENT) {
-            AnimalweightsNeoForgeClient.init();
-        }
 
         WeightSyncDispatcher.install(animal ->
             PacketDistributor.sendToPlayersTrackingEntity(animal,
@@ -49,12 +44,9 @@ public class AnimalweightsNeoForge {
 
     private static void onRegisterPayloads(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar("1");
-        registrar.playToClient(WeightSyncPayload.TYPE, WeightSyncPayload.CODEC,
-            (payload, ctx) -> AnimalweightsNeoForgeClient.applyWeight(payload.entityId, payload.weight));
-        registrar.playToClient(LootEntryPayload.TYPE, LootEntryPayload.CODEC,
-            (payload, ctx) -> AnimalweightsNeoForgeClient.applyLootEntry(payload.entityType, payload.items));
-        registrar.playToClient(LootSnapshotPayload.TYPE, LootSnapshotPayload.CODEC,
-            (payload, ctx) -> AnimalweightsNeoForgeClient.applyLootSnapshot(payload.entries));
+        registrar.playToClient(WeightSyncPayload.TYPE, WeightSyncPayload.CODEC);
+        registrar.playToClient(LootEntryPayload.TYPE, LootEntryPayload.CODEC);
+        registrar.playToClient(LootSnapshotPayload.TYPE, LootSnapshotPayload.CODEC);
     }
 
     private static void onRegisterCommands(RegisterCommandsEvent event) {
