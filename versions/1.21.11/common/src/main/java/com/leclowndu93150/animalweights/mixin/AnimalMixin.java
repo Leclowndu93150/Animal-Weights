@@ -4,6 +4,7 @@ import com.leclowndu93150.animalweights.WeightAttachment;
 import com.leclowndu93150.animalweights.WeightData;
 import com.leclowndu93150.animalweights.WeightHolder;
 import com.leclowndu93150.animalweights.config.ConfigManager;
+import com.leclowndu93150.animalweights.display.LegacyDisplayCleanup;
 import com.leclowndu93150.animalweights.display.LootCache;
 import com.leclowndu93150.animalweights.goal.WanderToHabitatGoal;
 import com.leclowndu93150.animalweights.habitat.HabitatScanner;
@@ -31,6 +32,9 @@ public abstract class AnimalMixin extends AgeableMob implements WeightHolder {
 
     @Unique
     private boolean animalweights$goalRegistered;
+
+    @Unique
+    private boolean animalweights$legacyDisplaysCleaned;
 
     @Unique
     private WeightData animalweights$weightData;
@@ -64,6 +68,10 @@ public abstract class AnimalMixin extends AgeableMob implements WeightHolder {
     @Inject(method = "customServerAiStep", at = @At("TAIL"))
     private void animalweights$serverTick(ServerLevel level, CallbackInfo ci) {
         Animal self = (Animal) (Object) this;
+        if (!this.animalweights$legacyDisplaysCleaned) {
+            this.animalweights$legacyDisplaysCleaned = true;
+            LegacyDisplayCleanup.cleanup(self);
+        }
         if (!this.animalweights$goalRegistered) {
             this.animalweights$goalRegistered = true;
             this.goalSelector.addGoal(5, new WanderToHabitatGoal((PathfinderMob) (Object) this, 1.0));

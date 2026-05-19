@@ -6,7 +6,8 @@
   "refmap": "animalweights.refmap.json",
   "mixins": [
     "AnimalMixin",
-    "LivingEntityDropMixin"
+    "LivingEntityDropMixin",
+    "LivingEntityRemoveMixin"
   ],
   "client": [
     "LivingEntityRendererMixin"

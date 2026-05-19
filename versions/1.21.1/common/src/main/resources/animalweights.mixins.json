@@ -5,7 +5,8 @@
   "compatibilityLevel": "JAVA_${java_version}",
   "mixins": [
     "AnimalMixin",
-    "LivingEntityDropMixin"
+    "LivingEntityDropMixin",
+    "LivingEntityRemoveMixin"
   ],
   "client": [
     "LivingEntityRendererMixin"
