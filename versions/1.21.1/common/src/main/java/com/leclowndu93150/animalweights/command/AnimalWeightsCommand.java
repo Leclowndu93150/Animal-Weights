@@ -1,6 +1,5 @@
 package com.leclowndu93150.animalweights.command;
 
-import com.leclowndu93150.animalweights.DisplayTracker;
 import com.leclowndu93150.animalweights.WeightAttachment;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -66,12 +65,7 @@ public final class AnimalWeightsCommand {
             if (target instanceof Animal animal) {
                 matched++;
                 int weight = WeightAttachment.getWeight(animal);
-                String preview = WeightAttachment.getLootPreview(animal);
                 source.sendSuccess(() -> Component.literal("  weight: " + weight).withStyle(ChatFormatting.YELLOW), false);
-                source.sendSuccess(() -> Component.literal("  loot_preview: " + (preview.isEmpty() ? "<empty>" : preview)), false);
-                int displays = target instanceof DisplayTracker tracker ? tracker.animalweights$displays().size() : -1;
-                source.sendSuccess(() -> Component.literal("  displays tracked: " + displays), false);
-                source.sendSuccess(() -> Component.literal("  passengers: " + target.getPassengers().size()), false);
             }
         }
         return matched;

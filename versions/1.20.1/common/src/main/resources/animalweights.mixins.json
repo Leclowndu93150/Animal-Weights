@@ -2,17 +2,11 @@
   "required": true,
   "minVersion": "0.8",
   "package": "com.leclowndu93150.animalweights.mixin",
-  "compatibilityLevel": "JAVA_17",
+  "compatibilityLevel": "JAVA_${java_version}",
   "refmap": "animalweights.refmap.json",
   "mixins": [
     "AnimalMixin",
-    "AnimalRemoveMixin",
-    "DisplayAccessor",
-    "DisplayShouldSaveMixin",
-    "ItemDisplayAccessor",
-    "LivingEntityDieMixin",
-    "LivingEntityDropMixin",
-    "TextDisplayAccessor"
+    "LivingEntityDropMixin"
   ],
   "client": [
     "LivingEntityRendererMixin"

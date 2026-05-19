@@ -26,6 +26,9 @@ public final class AnimalWeightsConfig {
     public boolean enableOverlay = true;
     public int sickTintColor = 0xFF80C070;
 
+    public OverlayMode overlayMode = OverlayMode.LOOKING;
+    public double overlayRange = 8.0;
+
     public AnimalWeightsConfig() {
     }
 }

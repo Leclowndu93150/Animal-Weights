@@ -5,15 +5,10 @@
   "compatibilityLevel": "JAVA_${java_version}",
   "mixins": [
     "AnimalMixin",
-    "AnimalRemoveMixin",
-    "DisplayAccessor",
-    "DisplayShouldSaveMixin",
-    "ItemDisplayAccessor",
-    "LivingEntityDieMixin",
-    "LivingEntityDropMixin",
-    "TextDisplayAccessor"
+    "LivingEntityDropMixin"
   ],
   "client": [
+    "LevelRendererMixin",
     "LivingEntityRenderStateMixin",
     "LivingEntityRendererMixin"
   ],

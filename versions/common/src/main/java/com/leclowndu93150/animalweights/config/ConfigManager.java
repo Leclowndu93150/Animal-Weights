@@ -48,6 +48,9 @@ public final class ConfigManager {
     private static AnimalWeightsConfig sanitize(AnimalWeightsConfig c) {
         if (c.dropScalingMode == null) c.dropScalingMode = ScalingMode.MULTIPLICATIVE;
         if (c.xpScalingMode == null) c.xpScalingMode = ScalingMode.MULTIPLICATIVE;
+        if (c.overlayMode == null) c.overlayMode = OverlayMode.LOOKING;
+        if (c.overlayRange < 1.0) c.overlayRange = 1.0;
+        if (c.overlayRange > 64.0) c.overlayRange = 64.0;
         if (c.minWeight < 0) c.minWeight = 0;
         if (c.maxWeight < c.minWeight + 1) c.maxWeight = c.minWeight + 1;
         if (c.defaultWeight < c.minWeight) c.defaultWeight = c.minWeight;

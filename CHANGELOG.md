@@ -1,1 +1,1 @@
-fix crash
+fix mobs not spawning anymore

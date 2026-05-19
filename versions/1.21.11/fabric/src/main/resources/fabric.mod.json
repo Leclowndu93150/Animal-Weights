@@ -8,6 +8,9 @@
   "entrypoints": {
     "main": [
       "com.leclowndu93150.animalweights.AnimalweightsFabric"
+    ],
+    "client": [
+      "com.leclowndu93150.animalweights.AnimalweightsFabricClient"
     ]
   },
   "mixins": [

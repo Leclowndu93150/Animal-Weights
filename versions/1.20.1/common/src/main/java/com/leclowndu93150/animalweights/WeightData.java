@@ -19,18 +19,16 @@ public final class WeightData {
     }
 
     private int weight;
-    private String lootPreview;
     private long bonusCacheTick = Long.MIN_VALUE;
     private boolean bonusCacheValue;
 
     public WeightData() {
-        this(defaultWeight(), "");
+        this(defaultWeight());
     }
 
-    public WeightData(int weight, String lootPreview) {
+    public WeightData(int weight) {
         AnimalWeightsConfig cfg = ConfigManager.get();
         this.weight = Mth.clamp(weight, cfg.minWeight, cfg.maxWeight);
-        this.lootPreview = lootPreview == null ? "" : lootPreview;
     }
 
     public int getWeight() {
@@ -40,14 +38,6 @@ public final class WeightData {
     public void setWeight(int weight) {
         AnimalWeightsConfig cfg = ConfigManager.get();
         this.weight = Mth.clamp(weight, cfg.minWeight, cfg.maxWeight);
-    }
-
-    public String getLootPreview() {
-        return lootPreview;
-    }
-
-    public void setLootPreview(String lootPreview) {
-        this.lootPreview = lootPreview == null ? "" : lootPreview;
     }
 
     public long getBonusCacheTick() {
@@ -65,14 +55,10 @@ public final class WeightData {
 
     public void save(CompoundTag tag) {
         tag.putInt("weight", this.weight);
-        if (!this.lootPreview.isEmpty()) {
-            tag.putString("loot_preview", this.lootPreview);
-        }
     }
 
     public static WeightData load(CompoundTag tag) {
         int w = tag.contains("weight") ? tag.getInt("weight") : defaultWeight();
-        String preview = tag.contains("loot_preview") ? tag.getString("loot_preview") : "";
-        return new WeightData(w, preview);
+        return new WeightData(w);
     }
 }

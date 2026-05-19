@@ -27,21 +27,10 @@ public final class WeightAttachment {
         if (current.getWeight() == weight) {
             return;
         }
-        WeightData replacement = new WeightData(weight, current.getLootPreview());
+        WeightData replacement = new WeightData(weight);
         replacement.storeBonusCache(current.getBonusCacheTick(), current.getBonusCacheValue());
         ((WeightHolder) animal).animalweights$setWeightData(replacement);
         syncToTrackers(animal);
-    }
-
-    public static String getLootPreview(Animal animal) {
-        return get(animal).getLootPreview();
-    }
-
-    public static void setLootPreview(Animal animal, String csv) {
-        WeightData current = get(animal);
-        WeightData replacement = new WeightData(current.getWeight(), csv);
-        replacement.storeBonusCache(current.getBonusCacheTick(), current.getBonusCacheValue());
-        ((WeightHolder) animal).animalweights$setWeightData(replacement);
     }
 
     public static void syncToTrackers(Animal animal) {
