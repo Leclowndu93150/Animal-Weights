@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "tools",
+  "ingredients": [
+    "minecraft:spyglass",
+    "minecraft:paper"
+  ],
+  "result": {
+    "id": "animalweights:magnifying_glass",
+    "count": 1
+  }
+}

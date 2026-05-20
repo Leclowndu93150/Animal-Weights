@@ -11,6 +11,9 @@
     ],
     "client": [
       "com.leclowndu93150.animalweights.AnimalweightsFabricClient"
+    ],
+    "jade": [
+      "com.leclowndu93150.animalweights.compat.jade.AnimalWeightsJadePlugin"
     ]
   },
   "mixins": [

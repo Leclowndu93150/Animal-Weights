@@ -29,6 +29,7 @@ public class AnimalweightsFabric implements ModInitializer {
     @Override
     public void onInitialize() {
         Animalweights.init(FabricLoader.getInstance().getConfigDir());
+        AnimalweightsItems.register();
         CommandRegistrationCallback.EVENT.register((dispatcher, registry, env) ->
             AnimalWeightsCommand.register(dispatcher));
 

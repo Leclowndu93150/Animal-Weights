@@ -78,8 +78,8 @@ public abstract class AnimalMixin extends AgeableMob implements WeightHolder {
         }
         WeightTickLogic.tick(self, level);
         LootCache.ensureSampled(self, level);
-        int currentWeight = WeightAttachment.getWeight(self);
-        if (ConfigManager.get().enableSickParticles && currentWeight <= ConfigManager.get().minWeight && level.getGameTime() % 30 == 0) {
+        var cfg = ConfigManager.get();
+        if (cfg.enableSickParticles && WeightAttachment.getWeight(self) <= cfg.sickThreshold && level.getGameTime() % 30 == 0) {
             level.sendParticles(ParticleTypes.MYCELIUM,
                 self.getX(), self.getY() + self.getBbHeight() * 0.7, self.getZ(),
                 3, 0.25, 0.2, 0.25, 0.0);
@@ -89,7 +89,7 @@ public abstract class AnimalMixin extends AgeableMob implements WeightHolder {
     @Inject(method = "canFallInLove", at = @At("HEAD"), cancellable = true)
     private void animalweights$blockSickBreeding(CallbackInfoReturnable<Boolean> cir) {
         Animal self = (Animal) (Object) this;
-        if (WeightAttachment.getWeight(self) <= 0) {
+        if (WeightAttachment.getWeight(self) <= ConfigManager.get().sickThreshold) {
             cir.setReturnValue(false);
         }
     }

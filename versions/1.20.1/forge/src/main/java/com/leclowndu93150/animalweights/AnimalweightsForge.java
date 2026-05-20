@@ -21,6 +21,7 @@ import net.minecraftforge.fml.loading.FMLPaths;
 public class AnimalweightsForge {
     public AnimalweightsForge() {
         Animalweights.init(FMLPaths.CONFIGDIR.get());
+        AnimalweightsItems.register(FMLJavaModLoadingContext.get().getModEventBus());
         AnimalweightsForgeNetwork.register();
         MinecraftForge.EVENT_BUS.addListener(AnimalweightsForge::onRegisterCommands);
         MinecraftForge.EVENT_BUS.addListener(AnimalweightsForge::onStartTracking);

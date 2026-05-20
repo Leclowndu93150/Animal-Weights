@@ -25,6 +25,7 @@ public class AnimalweightsFabric implements ModInitializer {
     @Override
     public void onInitialize() {
         Animalweights.init(FabricLoader.getInstance().getConfigDir());
+        AnimalweightsItems.register();
 
         PayloadTypeRegistry.playS2C().register(WeightSyncPayload.TYPE, WeightSyncPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(LootEntryPayload.TYPE, LootEntryPayload.CODEC);

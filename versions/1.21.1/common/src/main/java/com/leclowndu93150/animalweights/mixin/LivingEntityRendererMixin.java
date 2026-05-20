@@ -23,7 +23,7 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, M extend
     private void animalweights$tintSick(EntityModel<T> model, PoseStack pose, VertexConsumer consumer, int packedLight, int overlay, int color,
                                          T entity, float entityYaw, float partialTicks, PoseStack poseStack2, MultiBufferSource buffer, int light) {
         AnimalWeightsConfig cfg = ConfigManager.get();
-        if (cfg.enableSickTint && entity instanceof Animal animal && WeightAttachment.getWeight(animal) <= cfg.minWeight) {
+        if (cfg.enableSickTint && entity instanceof Animal animal && WeightAttachment.getWeight(animal) <= cfg.sickThreshold) {
             color = cfg.sickTintColor;
         }
         model.renderToBuffer(pose, consumer, packedLight, overlay, color);

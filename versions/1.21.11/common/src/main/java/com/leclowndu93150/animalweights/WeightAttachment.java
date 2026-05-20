@@ -27,9 +27,7 @@ public final class WeightAttachment {
         if (current.getWeight() == weight) {
             return;
         }
-        WeightData replacement = new WeightData(weight);
-        replacement.storeBonusCache(current.getBonusCacheTick(), current.getBonusCacheValue());
-        ((WeightHolder) animal).animalweights$setWeightData(replacement);
+        current.setWeight(weight);
         syncToTrackers(animal);
     }
 

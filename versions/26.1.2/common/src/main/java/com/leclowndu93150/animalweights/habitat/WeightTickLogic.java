@@ -1,6 +1,7 @@
 package com.leclowndu93150.animalweights.habitat;
 
 import com.leclowndu93150.animalweights.WeightAttachment;
+import com.leclowndu93150.animalweights.WeightData;
 import com.leclowndu93150.animalweights.config.AnimalWeightsConfig;
 import com.leclowndu93150.animalweights.config.ConfigManager;
 import net.minecraft.core.BlockPos;
@@ -17,10 +18,13 @@ public final class WeightTickLogic {
             return;
         }
         AnimalWeightsConfig cfg = ConfigManager.get();
-        long time = level.getGameTime();
-        if ((time + animal.getId()) % cfg.weightTickIntervalTicks != 0) {
+        WeightData data = WeightAttachment.get(animal);
+        data.incrementTicksSinceEvaluation();
+        if (data.getTicksSinceEvaluation() < cfg.weightTickIntervalTicks) {
             return;
         }
+        data.resetTicksSinceEvaluation();
+
         BlockPos pos = animal.blockPosition();
         int score = 0;
         if (HabitatScanner.hasBrightLight(level, pos)) score++;

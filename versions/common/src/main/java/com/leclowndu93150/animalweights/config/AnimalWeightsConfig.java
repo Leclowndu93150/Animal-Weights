@@ -7,13 +7,14 @@ public final class AnimalWeightsConfig {
     public int minWeight = 0;
     public int defaultWeight = 1;
     public int maxWeight = 8;
+    public int sickThreshold = 0;
 
     public int weightTickIntervalTicks = 8000;
     public double weightGainChance = 0.5;
     public double weightMinorLossChance = 0.25;
     public double weightSevereLossChance = 0.5;
 
-    public int lightThreshold = 14;
+    public int lightThreshold = 10;
     public int habitatScanRadius = 4;
     public int crowdRadius = 2;
     public int crowdLimit = 6;

@@ -19,6 +19,7 @@ public final class WeightData {
     }
 
     private int weight;
+    private int ticksSinceEvaluation;
     private long bonusCacheTick = Long.MIN_VALUE;
     private boolean bonusCacheValue;
 
@@ -40,6 +41,18 @@ public final class WeightData {
         this.weight = Mth.clamp(weight, cfg.minWeight, cfg.maxWeight);
     }
 
+    public int getTicksSinceEvaluation() {
+        return ticksSinceEvaluation;
+    }
+
+    public void incrementTicksSinceEvaluation() {
+        this.ticksSinceEvaluation++;
+    }
+
+    public void resetTicksSinceEvaluation() {
+        this.ticksSinceEvaluation = 0;
+    }
+
     public long getBonusCacheTick() {
         return bonusCacheTick;
     }
@@ -55,10 +68,15 @@ public final class WeightData {
 
     public void save(CompoundTag tag) {
         tag.putInt("weight", this.weight);
+        tag.putInt("ticksSinceEvaluation", this.ticksSinceEvaluation);
     }
 
     public static WeightData load(CompoundTag tag) {
         int w = tag.contains("weight") ? tag.getInt("weight") : defaultWeight();
-        return new WeightData(w);
+        WeightData data = new WeightData(w);
+        if (tag.contains("ticksSinceEvaluation")) {
+            data.ticksSinceEvaluation = Math.max(0, tag.getInt("ticksSinceEvaluation"));
+        }
+        return data;
     }
 }

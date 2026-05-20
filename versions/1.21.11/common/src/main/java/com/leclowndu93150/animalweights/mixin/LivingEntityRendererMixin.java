@@ -19,7 +19,7 @@ public abstract class LivingEntityRendererMixin {
     @Inject(method = "extractRenderState", at = @At("TAIL"))
     private void animalweights$captureSick(LivingEntity entity, LivingEntityRenderState state, float partialTicks, CallbackInfo ci) {
         AnimalWeightsConfig cfg = ConfigManager.get();
-        boolean sick = cfg.enableSickTint && entity instanceof Animal animal && WeightAttachment.getWeight(animal) <= cfg.minWeight;
+        boolean sick = cfg.enableSickTint && entity instanceof Animal animal && WeightAttachment.getWeight(animal) <= cfg.sickThreshold;
         ((SickState) state).animalweights$setSick(sick);
     }
 

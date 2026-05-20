@@ -24,6 +24,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 public class AnimalweightsNeoForge {
     public AnimalweightsNeoForge(IEventBus modBus) {
         Animalweights.init(FMLPaths.CONFIGDIR.get());
+        AnimalweightsItems.register(modBus);
         modBus.addListener(AnimalweightsNeoForge::onRegisterPayloads);
         NeoForge.EVENT_BUS.addListener(AnimalweightsNeoForge::onRegisterCommands);
         NeoForge.EVENT_BUS.addListener(AnimalweightsNeoForge::onStartTracking);
