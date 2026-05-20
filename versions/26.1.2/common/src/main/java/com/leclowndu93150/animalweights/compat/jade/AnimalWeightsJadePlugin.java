@@ -44,7 +44,7 @@ public class AnimalWeightsJadePlugin implements IWailaPlugin {
         @Override
         public void appendTooltip(ITooltip tooltip, EntityAccessor accessor, IPluginConfig config) {
             if (accessor.getEntity() instanceof Animal animal) {
-                int serverTicks = accessor.getServerData().getInt(DATA_KEY);
+                int serverTicks = accessor.getServerData().getIntOr(DATA_KEY, 0);
                 for (Component line : MagnifyingGlassInspector.buildCompactLines(animal, serverTicks)) {
                     tooltip.add(line);
                 }
