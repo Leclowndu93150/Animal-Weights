@@ -1,5 +1,6 @@
 package com.leclowndu93150.animalweights.mixin;
 
+import com.leclowndu93150.animalweights.AnimalWeightsRules;
 import com.leclowndu93150.animalweights.SickState;
 import com.leclowndu93150.animalweights.WeightAttachment;
 import com.leclowndu93150.animalweights.config.AnimalWeightsConfig;
@@ -19,7 +20,7 @@ public abstract class LivingEntityRendererMixin {
     @Inject(method = "extractRenderState", at = @At("TAIL"))
     private void animalweights$captureSick(LivingEntity entity, LivingEntityRenderState state, float partialTicks, CallbackInfo ci) {
         AnimalWeightsConfig cfg = ConfigManager.get();
-        boolean sick = cfg.enableSickTint && entity instanceof Animal animal && WeightAttachment.getWeight(animal) <= cfg.sickThreshold;
+        boolean sick = cfg.enableSickTint && entity instanceof Animal animal && !AnimalWeightsRules.isDisabled(animal) && WeightAttachment.getWeight(animal) <= cfg.sickThreshold;
         ((SickState) state).animalweights$setSick(sick);
     }
 

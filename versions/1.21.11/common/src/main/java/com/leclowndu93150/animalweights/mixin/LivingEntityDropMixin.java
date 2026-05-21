@@ -1,5 +1,6 @@
 package com.leclowndu93150.animalweights.mixin;
 
+import com.leclowndu93150.animalweights.AnimalWeightsRules;
 import com.leclowndu93150.animalweights.WeightAttachment;
 import com.leclowndu93150.animalweights.config.ConfigManager;
 import com.leclowndu93150.animalweights.habitat.HabitatScanner;
@@ -32,6 +33,9 @@ public abstract class LivingEntityDropMixin {
         }
         LivingEntity self = (LivingEntity) (Object) this;
         if (!(self instanceof Animal animal)) {
+            return;
+        }
+        if (AnimalWeightsRules.isDisabled(animal)) {
             return;
         }
         int extra = ConfigManager.get().dropScalingMode.extraRolls(WeightAttachment.getWeight(animal));

@@ -1,5 +1,6 @@
 package com.leclowndu93150.animalweights.mixin;
 
+import com.leclowndu93150.animalweights.AnimalWeightsRules;
 import com.leclowndu93150.animalweights.WeightAttachment;
 import com.leclowndu93150.animalweights.WeightData;
 import com.leclowndu93150.animalweights.WeightHolder;
@@ -74,6 +75,9 @@ public abstract class AnimalMixin extends AgeableMob implements WeightHolder {
         if (!(self.level() instanceof ServerLevel level)) {
             return;
         }
+        if (AnimalWeightsRules.isDisabled(self)) {
+            return;
+        }
         if (!this.animalweights$legacyDisplaysCleaned) {
             this.animalweights$legacyDisplaysCleaned = true;
             LegacyDisplayCleanup.cleanup(self);
@@ -95,6 +99,9 @@ public abstract class AnimalMixin extends AgeableMob implements WeightHolder {
     @Inject(method = "canFallInLove", at = @At("HEAD"), cancellable = true)
     private void animalweights$blockSickBreeding(CallbackInfoReturnable<Boolean> cir) {
         Animal self = (Animal) (Object) this;
+        if (AnimalWeightsRules.isDisabled(self)) {
+            return;
+        }
         if (WeightAttachment.getWeight(self) <= ConfigManager.get().sickThreshold) {
             cir.setReturnValue(false);
         }
@@ -104,6 +111,9 @@ public abstract class AnimalMixin extends AgeableMob implements WeightHolder {
     private void animalweights$scaleXp(CallbackInfoReturnable<Integer> cir) {
         Animal self = (Animal) (Object) this;
         if (!(self.level() instanceof ServerLevel level)) {
+            return;
+        }
+        if (AnimalWeightsRules.isDisabled(self)) {
             return;
         }
         int base = cir.getReturnValueI();

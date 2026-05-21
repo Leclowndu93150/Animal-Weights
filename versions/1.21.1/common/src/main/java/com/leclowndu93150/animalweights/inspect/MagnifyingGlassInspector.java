@@ -1,5 +1,6 @@
 package com.leclowndu93150.animalweights.inspect;
 
+import com.leclowndu93150.animalweights.AnimalWeightsRules;
 import com.leclowndu93150.animalweights.WeightAttachment;
 import com.leclowndu93150.animalweights.config.AnimalWeightsConfig;
 import com.leclowndu93150.animalweights.config.ConfigManager;
@@ -22,6 +23,9 @@ public final class MagnifyingGlassInspector {
     }
 
     public static List<Component> buildChatLines(Animal animal) {
+        if (AnimalWeightsRules.isDisabled(animal)) {
+            return List.of();
+        }
         Snapshot s = snapshot(animal, -1);
         List<Component> lines = new ArrayList<>(5);
         lines.add(Component.literal(animal.getType().getDescription().getString())
@@ -40,6 +44,9 @@ public final class MagnifyingGlassInspector {
     }
 
     public static List<Component> buildCompactLines(Animal animal, int elapsedTicksOverride) {
+        if (AnimalWeightsRules.isDisabled(animal)) {
+            return List.of();
+        }
         Snapshot s = snapshot(animal, elapsedTicksOverride);
         List<Component> lines = new ArrayList<>(4);
         lines.add(weightLine(s));
@@ -68,6 +75,10 @@ public final class MagnifyingGlassInspector {
     }
 
     private static MutableComponent nextLine(Snapshot s) {
+        if (s.sleeping) {
+            return Component.literal("Resting until dawn")
+                .withStyle(ChatFormatting.DARK_AQUA);
+        }
         return Component.literal("Next ").withStyle(ChatFormatting.GRAY)
             .append(Component.literal(s.secondsUntilNext + "s").withStyle(ChatFormatting.WHITE))
             .append(Component.literal(" → ").withStyle(ChatFormatting.DARK_GRAY))
@@ -92,6 +103,7 @@ public final class MagnifyingGlassInspector {
         int ticksUntilNext = Math.max(0, interval - elapsed);
         s.secondsUntilNext = ticksUntilNext / 20L;
         s.outcome = predictOutcome(score);
+        s.sleeping = AnimalWeightsRules.isSleeping(level);
         return s;
     }
 
@@ -116,6 +128,7 @@ public final class MagnifyingGlassInspector {
         boolean water;
         boolean grazing;
         boolean notCrowded;
+        boolean sleeping;
         long secondsUntilNext;
         Component outcome;
     }

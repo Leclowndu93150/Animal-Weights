@@ -1,5 +1,6 @@
 package com.leclowndu93150.animalweights.mixin;
 
+import com.leclowndu93150.animalweights.AnimalWeightsRules;
 import com.leclowndu93150.animalweights.WeightAttachment;
 import com.leclowndu93150.animalweights.config.AnimalWeightsConfig;
 import com.leclowndu93150.animalweights.config.ConfigManager;
@@ -23,7 +24,7 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, M extend
     private void animalweights$tintSick(EntityModel<T> model, PoseStack pose, VertexConsumer consumer, int packedLight, int overlay, int color,
                                          T entity, float entityYaw, float partialTicks, PoseStack poseStack2, MultiBufferSource buffer, int light) {
         AnimalWeightsConfig cfg = ConfigManager.get();
-        if (cfg.enableSickTint && entity instanceof Animal animal && WeightAttachment.getWeight(animal) <= cfg.sickThreshold) {
+        if (cfg.enableSickTint && entity instanceof Animal animal && !AnimalWeightsRules.isDisabled(animal) && WeightAttachment.getWeight(animal) <= cfg.sickThreshold) {
             color = cfg.sickTintColor;
         }
         model.renderToBuffer(pose, consumer, packedLight, overlay, color);

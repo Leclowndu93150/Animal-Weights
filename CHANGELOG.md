@@ -1,16 +1,24 @@
-Added a Magnifying Glass item that shows an animal's condition when you right-click it (weight, sick status, habitat checks for light/water/grazing/space, and how long until the next check). Craft it from a spyglass and paper. The item lives in a new Animal Weights creative tab.
+# 1.0.5
 
-Added Jade compat. Hover over any animal with Jade installed to see the same condition info, including a live countdown to the next weight check.
+Animals now pause their weight cycle at night. They rest until dawn, don't lose weight while you're sleeping, and the magnifying glass / Jade tooltip shows "Resting until dawn" instead of a countdown. Disable via `pauseAtNight: false` in the config.
 
-Fixed animals not gaining weight even with all conditions met. The internal check that runs every weight cycle was tied to global game time and could be skipped if the chunk unloaded for any moment, leaving mobs stuck. Each animal now has its own counter that survives chunk reloads.
+Added diet groups. Carnivores (wolf, cat, ocelot, polar bear, frog) no longer need grazing; they get a free point in place of it. Aquatic mobs (axolotl, dolphin, all fish) need water and ignore grass. Omnivores (chicken, panda, fox, bee, turtle, hoglin, sniffer, armadillo) need light, space, and either water or grass. Herbivores still need all four (light/water/grass/space). Modded animals default to omnivore so they're not punished for unfamiliar habitats. Override per entity ID via the `entityDiets` config map.
 
-Fixed torches being ignored as a light source. The default light threshold was 15, which only a torch's own block met. Lowered to 10 so torches actually count at reasonable spacing. If you already have a config file, edit lightThreshold to 10 or delete animalweights.json to regenerate.
+Added `disabledEntities` config option to fully exclude entity types from the system. Useful for cosmetic pets like Quark's Shiba Inus that have no loot worth scaling. Disabled mobs get no weight tracking, no sick tint, no breeding block, no drop scaling, no Jade tooltip, no chat output from the magnifying glass. Example:
 
-Habitat detection now uses the brightest of sun or block light. Outdoor pastures during the day no longer fail the light check.
+```
+"disabledEntities": ["quark:shiba"]
+```
 
-Made the wander-to-habitat AI cheaper. Animals still seek out better spots but the goal no longer eats a noticeable chunk of server tick budget on big farms.
+# 1.0.4
 
-Crowding now matches species by entity type instead of exact Java class, so modded variants of vanilla animals count correctly.
-
-Added a separate sick threshold to the config (sickThreshold, default 0) so you can raise minWeight above 0 without every animal becoming permanently sick.
-
+- Added a Magnifying Glass item (craft with spyglass + paper) that prints an animal's weight, sick status, habitat checks, and time until the next check. Lives in a new Animal Weights creative tab.
+- Added Jade compat: hover over an animal to see the same info with a live countdown.
+- Fixed animals not gaining weight even with all conditions met. Each animal now has its own counter that survives chunk reloads.
+- Fixed torches being ignored. Lowered default light threshold from 15 to 10. Existing configs need lightThreshold updated manually or animalweights.json deleted to regenerate.
+- Habitat light check now uses the brightest of sun or block light. Daytime pastures pass.
+- Cheaper wander-to-habitat AI. Big farms no longer eat noticeable tick budget.
+- Crowding matches by entity type instead of exact Java class, so modded variants count.
+- Added sickThreshold config (default 0), so raising minWeight above 0 no longer makes everything permanently sick.
+- Reworked config with comments.
+- Reworked overlay display to fade in/out when looking at an entity.

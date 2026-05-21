@@ -1,5 +1,6 @@
 package com.leclowndu93150.animalweights.mixin;
 
+import com.leclowndu93150.animalweights.AnimalWeightsRules;
 import com.leclowndu93150.animalweights.WeightAttachment;
 import com.leclowndu93150.animalweights.WeightData;
 import com.leclowndu93150.animalweights.WeightHolder;
@@ -11,13 +12,13 @@ import com.leclowndu93150.animalweights.habitat.HabitatScanner;
 import com.leclowndu93150.animalweights.habitat.WeightTickLogic;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -68,6 +69,9 @@ public abstract class AnimalMixin extends AgeableMob implements WeightHolder {
     @Inject(method = "customServerAiStep", at = @At("TAIL"))
     private void animalweights$serverTick(ServerLevel level, CallbackInfo ci) {
         Animal self = (Animal) (Object) this;
+        if (AnimalWeightsRules.isDisabled(self)) {
+            return;
+        }
         if (!this.animalweights$legacyDisplaysCleaned) {
             this.animalweights$legacyDisplaysCleaned = true;
             LegacyDisplayCleanup.cleanup(self);
@@ -89,6 +93,9 @@ public abstract class AnimalMixin extends AgeableMob implements WeightHolder {
     @Inject(method = "canFallInLove", at = @At("HEAD"), cancellable = true)
     private void animalweights$blockSickBreeding(CallbackInfoReturnable<Boolean> cir) {
         Animal self = (Animal) (Object) this;
+        if (AnimalWeightsRules.isDisabled(self)) {
+            return;
+        }
         if (WeightAttachment.getWeight(self) <= ConfigManager.get().sickThreshold) {
             cir.setReturnValue(false);
         }
@@ -97,6 +104,9 @@ public abstract class AnimalMixin extends AgeableMob implements WeightHolder {
     @Inject(method = "getBaseExperienceReward", at = @At("RETURN"), cancellable = true)
     private void animalweights$scaleXp(ServerLevel level, CallbackInfoReturnable<Integer> cir) {
         Animal self = (Animal) (Object) this;
+        if (AnimalWeightsRules.isDisabled(self)) {
+            return;
+        }
         int base = cir.getReturnValueI();
         int weight = Math.max(1, WeightAttachment.getWeight(self));
         int scaled = ConfigManager.get().xpScalingMode.apply(base, weight);

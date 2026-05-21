@@ -121,6 +121,16 @@ public final class ConfigManager {
         addComment(out, "overlayRange", "Maximum distance in blocks for overlay visibility. Clamped from 1.0 to 64.0.");
         addValue(out, values, "overlayRange");
 
+        addComment(out, "pauseAtNight", "Whether animals pause their weight cycle at night, like sleeping. Possible inputs: true, false.");
+        addValue(out, values, "pauseAtNight");
+
+        addComment(out, "defaultDiet", "Diet used for animals not listed in entityDiets (modded animals). Possible inputs: HERBIVORE, CARNIVORE, OMNIVORE, AQUATIC.");
+        addValue(out, values, "defaultDiet");
+        addComment(out, "entityDiets", "Diet per entity type. Herbivores need grazing, aquatic need water, carnivores skip grazing, omnivores skip both grazing and water requirements (still benefit from them).");
+        addValue(out, values, "entityDiets");
+        addComment(out, "disabledEntities", "Entity type IDs (e.g. \"quark:shiba\") fully ignored by the mod: no weight tracking, no drop scaling, no sick tint, no breeding block, no tooltip.");
+        addValue(out, values, "disabledEntities");
+
         return out;
     }
 
@@ -149,6 +159,9 @@ public final class ConfigManager {
         if (c.proximityRadius < 1) c.proximityRadius = 1;
         if (c.lightThreshold < 0) c.lightThreshold = 0;
         if (c.lightThreshold > 15) c.lightThreshold = 15;
+        if (c.defaultDiet == null) c.defaultDiet = Diet.OMNIVORE;
+        if (c.entityDiets == null) c.entityDiets = new java.util.HashMap<>();
+        if (c.disabledEntities == null) c.disabledEntities = new java.util.LinkedHashSet<>();
         return c;
     }
 }

@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "com.leclowndu93150"
-version = "1.0.4"
+version = "1.0.5"
 
 prism {
     metadata {
@@ -21,6 +21,12 @@ prism {
             accessToken = providers.environmentVariable("CURSEFORGE_TOKEN")
             projectId = "1544774"
         }
+
+        modrinth {
+            accessToken = providers.environmentVariable("MODRINTH_TOKEN")
+            projectId = "L8hKhAzB"
+        }
+
     }
 
     curseMaven()
