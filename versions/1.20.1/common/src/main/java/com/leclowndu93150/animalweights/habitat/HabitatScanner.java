@@ -4,6 +4,7 @@ import com.leclowndu93150.animalweights.WeightAttachment;
 import com.leclowndu93150.animalweights.WeightData;
 import com.leclowndu93150.animalweights.config.AnimalWeightsConfig;
 import com.leclowndu93150.animalweights.config.ConfigManager;
+import com.leclowndu93150.animalweights.config.Diet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.FluidTags;
@@ -11,7 +12,9 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.LayeredCauldronBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 
@@ -54,6 +57,43 @@ public final class HabitatScanner {
                     cursor.set(cx + dx, cy + dy, cz + dz);
                     BlockState state = level.getBlockState(cursor);
                     if (state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.MOSS_BLOCK)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    public static boolean hasLavaNearby(Level level, BlockPos center, int radius) {
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        int cx = center.getX();
+        int cy = center.getY();
+        int cz = center.getZ();
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    cursor.set(cx + dx, cy + dy, cz + dz);
+                    if (level.getFluidState(cursor).is(FluidTags.LAVA)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    public static boolean hasNetherGroundNearby(Level level, BlockPos center, int radius) {
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        int cx = center.getX();
+        int cy = center.getY();
+        int cz = center.getZ();
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                for (int dy = -2; dy <= 1; dy++) {
+                    cursor.set(cx + dx, cy + dy, cz + dz);
+                    BlockState state = level.getBlockState(cursor);
+                    if (state.is(Blocks.CRIMSON_NYLIUM) || state.is(Blocks.WARPED_NYLIUM) || state.is(Blocks.NETHERRACK)) {
                         return true;
                     }
                 }
@@ -106,6 +146,66 @@ public final class HabitatScanner {
         if (foundWater) score++;
         if (foundGrazing) score++;
         return score;
+    }
+
+    public static int quickHabitatScoreFor(Diet diet, Level level, BlockPos pos) {
+        if (diet != Diet.NETHER) {
+            return quickHabitatScore(level, pos);
+        }
+        int score = 0;
+        if (level.getMaxLocalRawBrightness(pos) >= ConfigManager.get().lightThreshold) score++;
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        int cx = pos.getX();
+        int cy = pos.getY();
+        int cz = pos.getZ();
+        boolean foundLava = false;
+        boolean foundGround = false;
+        for (int dx = -1; dx <= 1 && !(foundLava && foundGround); dx++) {
+            for (int dz = -1; dz <= 1 && !(foundLava && foundGround); dz++) {
+                if (!foundLava) {
+                    cursor.set(cx + dx, cy, cz + dz);
+                    if (level.getFluidState(cursor).is(FluidTags.LAVA)) {
+                        foundLava = true;
+                    }
+                }
+                if (!foundGround) {
+                    cursor.set(cx + dx, cy - 1, cz + dz);
+                    BlockState state = level.getBlockState(cursor);
+                    if (state.is(Blocks.CRIMSON_NYLIUM) || state.is(Blocks.WARPED_NYLIUM) || state.is(Blocks.NETHERRACK)) {
+                        foundGround = true;
+                    }
+                }
+            }
+        }
+        if (foundLava) score++;
+        if (foundGround) score++;
+        return score;
+    }
+
+    public static BlockPos findFullWaterCauldronNearby(Level level, BlockPos center, int radius) {
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        int cx = center.getX();
+        int cy = center.getY();
+        int cz = center.getZ();
+        for (int dy = -radius; dy <= radius; dy++) {
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    cursor.set(cx + dx, cy + dy, cz + dz);
+                    BlockState state = level.getBlockState(cursor);
+                    if (state.is(Blocks.WATER_CAULDRON) && state.getValue(BlockStateProperties.LEVEL_CAULDRON) >= 1) {
+                        return cursor.immutable();
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    public static void drainWaterCauldron(Level level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        if (state.is(Blocks.WATER_CAULDRON) && state.getValue(BlockStateProperties.LEVEL_CAULDRON) >= 1) {
+            LayeredCauldronBlock.lowerFillLevel(state, level, pos);
+        }
     }
 
     public static boolean isNearWaterOrVillage(ServerLevel level, BlockPos pos) {

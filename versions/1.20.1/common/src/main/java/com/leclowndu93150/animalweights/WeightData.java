@@ -22,6 +22,7 @@ public final class WeightData {
     private int ticksSinceEvaluation;
     private long bonusCacheTick = Long.MIN_VALUE;
     private boolean bonusCacheValue;
+    private boolean naturallySpawned;
 
     public WeightData() {
         this(defaultWeight());
@@ -66,9 +67,18 @@ public final class WeightData {
         this.bonusCacheValue = value;
     }
 
+    public boolean isNaturallySpawned() {
+        return naturallySpawned;
+    }
+
+    public void setNaturallySpawned(boolean naturallySpawned) {
+        this.naturallySpawned = naturallySpawned;
+    }
+
     public void save(CompoundTag tag) {
         tag.putInt("weight", this.weight);
         tag.putInt("ticksSinceEvaluation", this.ticksSinceEvaluation);
+        tag.putBoolean("naturallySpawned", this.naturallySpawned);
     }
 
     public static WeightData load(CompoundTag tag) {
@@ -76,6 +86,9 @@ public final class WeightData {
         WeightData data = new WeightData(w);
         if (tag.contains("ticksSinceEvaluation")) {
             data.ticksSinceEvaluation = Math.max(0, tag.getInt("ticksSinceEvaluation"));
+        }
+        if (tag.contains("naturallySpawned")) {
+            data.naturallySpawned = tag.getBoolean("naturallySpawned");
         }
         return data;
     }

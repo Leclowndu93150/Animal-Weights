@@ -1,6 +1,7 @@
 package com.leclowndu93150.animalweights;
 
 import com.leclowndu93150.animalweights.command.AnimalWeightsCommand;
+import com.leclowndu93150.animalweights.config.ConfigManager;
 import com.leclowndu93150.animalweights.display.LootCache;
 import com.leclowndu93150.animalweights.network.LootEntryPayload;
 import com.leclowndu93150.animalweights.network.LootSnapshotPayload;
@@ -10,6 +11,7 @@ import com.leclowndu93150.animalweights.network.WeightSyncPayload;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.EntityTrackingEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
@@ -64,6 +66,8 @@ public class AnimalweightsFabric implements ModInitializer {
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
             LootSyncDispatcher.sendSnapshot(handler.player));
         ServerLifecycleEvents.SERVER_STARTED.register(server -> activeServer = server);
+        ServerTickEvents.END_SERVER_TICK.register(server -> ConfigManager.tickPendingSave());
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> ConfigManager.saveNow());
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
             activeServer = null;
             LootCache.clear();

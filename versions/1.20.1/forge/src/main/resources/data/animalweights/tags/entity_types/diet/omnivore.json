@@ -1,0 +1,12 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:chicken",
+    "minecraft:panda",
+    "minecraft:fox",
+    "minecraft:turtle",
+    "minecraft:sniffer",
+    "minecraft:bee",
+    "minecraft:hoglin"
+  ]
+}

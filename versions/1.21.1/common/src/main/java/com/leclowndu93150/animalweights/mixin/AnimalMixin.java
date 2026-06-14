@@ -16,6 +16,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
@@ -84,7 +85,9 @@ public abstract class AnimalMixin extends AgeableMob implements WeightHolder {
         }
         if (!this.animalweights$goalRegistered) {
             this.animalweights$goalRegistered = true;
-            this.goalSelector.addGoal(5, new WanderToHabitatGoal((PathfinderMob) (Object) this, 1.0));
+            if (!(self instanceof TamableAnimal)) {
+                this.goalSelector.addGoal(5, new WanderToHabitatGoal((PathfinderMob) (Object) this, 1.0));
+            }
         }
         WeightTickLogic.tick(self, level);
         LootCache.ensureSampled(self, level);

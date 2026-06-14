@@ -1,6 +1,7 @@
 package com.leclowndu93150.animalweights;
 
 import com.leclowndu93150.animalweights.command.AnimalWeightsCommand;
+import com.leclowndu93150.animalweights.config.ConfigManager;
 import com.leclowndu93150.animalweights.display.LootCache;
 import com.leclowndu93150.animalweights.network.LootSyncDispatcher;
 import com.leclowndu93150.animalweights.network.WeightSyncDispatcher;
@@ -10,7 +11,9 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.server.ServerStoppedEvent;
+import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
@@ -27,6 +30,8 @@ public class AnimalweightsForge {
         MinecraftForge.EVENT_BUS.addListener(AnimalweightsForge::onStartTracking);
         MinecraftForge.EVENT_BUS.addListener(AnimalweightsForge::onPlayerLoggedIn);
         MinecraftForge.EVENT_BUS.addListener(AnimalweightsForge::onServerStopped);
+        MinecraftForge.EVENT_BUS.addListener(AnimalweightsForge::onServerStopping);
+        MinecraftForge.EVENT_BUS.addListener(AnimalweightsForge::onServerTick);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(AnimalweightsForge::onClientSetup);
     }
 
@@ -52,5 +57,15 @@ public class AnimalweightsForge {
 
     private static void onServerStopped(ServerStoppedEvent event) {
         LootCache.clear();
+    }
+
+    private static void onServerStopping(ServerStoppingEvent event) {
+        ConfigManager.saveNow();
+    }
+
+    private static void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) {
+            ConfigManager.tickPendingSave();
+        }
     }
 }

@@ -13,10 +13,23 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiConsumer;
 
 public final class ConfigManager {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+    private static final long SAVE_DEBOUNCE_NANOS = 5_000_000_000L;
+    private static final Set<String> NETHER_TAGGED = Set.of(
+        "minecraft:strider"
+    );
+    private static final Set<String> DEFAULT_DISABLED = Set.of(
+        "minecraft:happy_ghast"
+    );
     private static AnimalWeightsConfig active = new AnimalWeightsConfig();
+    private static Path activePath;
+    private static BiConsumer<String, Throwable> activeErrorLogger = (msg, t) -> {};
+    private static final AtomicLong pendingSaveDeadline = new AtomicLong(0L);
 
     private ConfigManager() {
     }
@@ -25,8 +38,43 @@ public final class ConfigManager {
         return active;
     }
 
+    public static void scheduleSave() {
+        if (activePath == null) {
+            return;
+        }
+        pendingSaveDeadline.set(System.nanoTime() + SAVE_DEBOUNCE_NANOS);
+    }
+
+    public static void tickPendingSave() {
+        long deadline = pendingSaveDeadline.get();
+        if (deadline == 0L || System.nanoTime() < deadline) {
+            return;
+        }
+        if (!pendingSaveDeadline.compareAndSet(deadline, 0L)) {
+            return;
+        }
+        saveNow();
+    }
+
+    public static void saveNow() {
+        if (activePath == null) {
+            return;
+        }
+        pendingSaveDeadline.set(0L);
+        try {
+            Files.createDirectories(activePath.getParent());
+            try (Writer w = Files.newBufferedWriter(activePath)) {
+                GSON.toJson(commentedConfig(active), w);
+            }
+        } catch (IOException e) {
+            activeErrorLogger.accept("Failed to save animalweights.json", e);
+        }
+    }
+
     public static void loadOrCreate(Path configDir, java.util.function.BiConsumer<String, Throwable> errorLogger) {
         Path file = configDir.resolve("animalweights.json");
+        activePath = file;
+        activeErrorLogger = errorLogger;
         try {
             if (Files.exists(file)) {
                 try (Reader r = Files.newBufferedReader(file)) {
@@ -42,7 +90,7 @@ public final class ConfigManager {
                 }
             }
             Files.createDirectories(configDir);
-            active = new AnimalWeightsConfig();
+            active = sanitize(new AnimalWeightsConfig());
             try (Writer w = Files.newBufferedWriter(file)) {
                 GSON.toJson(commentedConfig(active), w);
             }
@@ -107,6 +155,13 @@ public final class ConfigManager {
         addComment(out, "proximityRadius", "Radius in blocks used for proximity habitat checks.");
         addValue(out, values, "proximityRadius");
 
+        addComment(out, "naturalSpawnSicknessResistance", "Whether naturally-spawned animals (from chunk gen, structures, patrols) are more resistant to losing weight from a bad habitat. Halves the chance of every weight-loss roll. Bred animals, eggs, and spawners are unaffected. Possible inputs: true, false.");
+        addValue(out, values, "naturalSpawnSicknessResistance");
+        addComment(out, "cauldronCountsAsWater", "Whether a water cauldron near an animal satisfies the water habitat requirement. Each successful weight gain that relied on a cauldron drains one fill level; an empty cauldron must be refilled by hand. Lets you keep livestock in the Nether or anywhere away from natural water. Possible inputs: true, false.");
+        addValue(out, values, "cauldronCountsAsWater");
+        addComment(out, "cauldronScanRadius", "Radius in blocks used to find a water cauldron around the animal. Defaults to 8 (larger than habitatScanRadius) so one cauldron covers a small barn.");
+        addValue(out, values, "cauldronScanRadius");
+
         addComment(out, "enableSickTint", "Whether sick animals get a green tint. Possible inputs: true, false.");
         addValue(out, values, "enableSickTint");
         addComment(out, "enableSickParticles", "Whether sick animals emit particles. Possible inputs: true, false.");
@@ -124,12 +179,16 @@ public final class ConfigManager {
         addComment(out, "pauseAtNight", "Whether animals pause their weight cycle at night, like sleeping. Possible inputs: true, false.");
         addValue(out, values, "pauseAtNight");
 
-        addComment(out, "defaultDiet", "Diet used for animals not listed in entityDiets (modded animals). Possible inputs: HERBIVORE, CARNIVORE, OMNIVORE, AQUATIC.");
+        addComment(out, "defaultDiet", "Diet used for animals not listed in entityDiets (modded animals). Possible inputs: HERBIVORE, CARNIVORE, OMNIVORE, AQUATIC, NETHER.");
         addValue(out, values, "defaultDiet");
-        addComment(out, "entityDiets", "Diet per entity type. Herbivores need grazing, aquatic need water, carnivores skip grazing, omnivores skip both grazing and water requirements (still benefit from them).");
+        addComment(out, "entityDiets", "Per-entity-type diet overrides. Starts empty; auto-populated from #animalweights:diet/* tags and biome spawn data on first sighting. Edit entries here to override. Herbivores need grazing, aquatic need water, carnivores skip grazing, omnivores skip both. NETHER animals (e.g. Strider) need lava and nylium/netherrack instead of water and grass, and only gain weight while in the Nether dimension; non-NETHER animals brought into the Nether have their weight cycle paused. Possible inputs: HERBIVORE, CARNIVORE, OMNIVORE, AQUATIC, NETHER.");
         addValue(out, values, "entityDiets");
-        addComment(out, "disabledEntities", "Entity type IDs (e.g. \"quark:shiba\") fully ignored by the mod: no weight tracking, no drop scaling, no sick tint, no breeding block, no tooltip.");
+        addComment(out, "entityFilterMode", "How the mod decides which entities to track. BLACKLIST: every Animal is tracked except those in disabledEntities. WHITELIST: only entities in enabledEntities are tracked. VANILLA_ONLY: track only minecraft: entities (plus anything in enabledEntities, minus anything in disabledEntities). Possible inputs: BLACKLIST, WHITELIST, VANILLA_ONLY.");
+        addValue(out, values, "entityFilterMode");
+        addComment(out, "disabledEntities", "Entity type IDs (e.g. \"quark:shiba\") fully ignored by the mod: no weight tracking, no drop scaling, no sick tint, no breeding block, no tooltip. Used in BLACKLIST and VANILLA_ONLY modes.");
         addValue(out, values, "disabledEntities");
+        addComment(out, "enabledEntities", "Entity type IDs that the mod tracks. Used in WHITELIST mode (only these are tracked) and as an extra opt-in list in VANILLA_ONLY mode. Example: [\"minecraft:cow\", \"minecraft:pig\", \"minecraft:chicken\"].");
+        addValue(out, values, "enabledEntities");
 
         return out;
     }
@@ -157,11 +216,22 @@ public final class ConfigManager {
         if (c.crowdRadius < 1) c.crowdRadius = 1;
         if (c.crowdLimit < 1) c.crowdLimit = 1;
         if (c.proximityRadius < 1) c.proximityRadius = 1;
+        if (c.cauldronScanRadius < 1) c.cauldronScanRadius = 1;
+        if (c.cauldronScanRadius > 32) c.cauldronScanRadius = 32;
         if (c.lightThreshold < 0) c.lightThreshold = 0;
         if (c.lightThreshold > 15) c.lightThreshold = 15;
         if (c.defaultDiet == null) c.defaultDiet = Diet.OMNIVORE;
         if (c.entityDiets == null) c.entityDiets = new java.util.HashMap<>();
+        if (c.entityFilterMode == null) c.entityFilterMode = EntityFilterMode.BLACKLIST;
         if (c.disabledEntities == null) c.disabledEntities = new java.util.LinkedHashSet<>();
+        if (c.enabledEntities == null) c.enabledEntities = new java.util.LinkedHashSet<>();
+        for (String id : NETHER_TAGGED) {
+            Diet existing = c.entityDiets.get(id);
+            if (existing != null && existing != Diet.NETHER) {
+                c.entityDiets.put(id, Diet.NETHER);
+            }
+        }
+        c.disabledEntities.addAll(DEFAULT_DISABLED);
         return c;
     }
 }

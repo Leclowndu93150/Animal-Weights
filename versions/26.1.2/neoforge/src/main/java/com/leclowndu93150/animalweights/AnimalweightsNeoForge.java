@@ -1,6 +1,7 @@
 package com.leclowndu93150.animalweights;
 
 import com.leclowndu93150.animalweights.command.AnimalWeightsCommand;
+import com.leclowndu93150.animalweights.config.ConfigManager;
 import com.leclowndu93150.animalweights.display.LootCache;
 import com.leclowndu93150.animalweights.network.LootEntryPayload;
 import com.leclowndu93150.animalweights.network.LootSnapshotPayload;
@@ -16,6 +17,8 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
@@ -30,6 +33,8 @@ public class AnimalweightsNeoForge {
         NeoForge.EVENT_BUS.addListener(AnimalweightsNeoForge::onStartTracking);
         NeoForge.EVENT_BUS.addListener(AnimalweightsNeoForge::onPlayerLoggedIn);
         NeoForge.EVENT_BUS.addListener(AnimalweightsNeoForge::onServerStopped);
+        NeoForge.EVENT_BUS.addListener(AnimalweightsNeoForge::onServerStopping);
+        NeoForge.EVENT_BUS.addListener(AnimalweightsNeoForge::onServerTickPost);
 
         WeightSyncDispatcher.install(animal ->
             PacketDistributor.sendToPlayersTrackingEntity(animal,
@@ -68,5 +73,13 @@ public class AnimalweightsNeoForge {
 
     private static void onServerStopped(ServerStoppedEvent event) {
         LootCache.clear();
+    }
+
+    private static void onServerStopping(ServerStoppingEvent event) {
+        ConfigManager.saveNow();
+    }
+
+    private static void onServerTickPost(ServerTickEvent.Post event) {
+        ConfigManager.tickPendingSave();
     }
 }

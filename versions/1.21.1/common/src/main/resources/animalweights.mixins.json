@@ -6,7 +6,8 @@
   "mixins": [
     "AnimalMixin",
     "LivingEntityDropMixin",
-    "LivingEntityRemoveMixin"
+    "LivingEntityRemoveMixin",
+    "MobMixin"
   ],
   "client": [
     "LivingEntityRendererMixin"

@@ -23,6 +23,7 @@ public final class WeightData {
     private int ticksSinceEvaluation;
     private long bonusCacheTick = Long.MIN_VALUE;
     private boolean bonusCacheValue;
+    private boolean naturallySpawned;
 
     public WeightData() {
         this(defaultWeight());
@@ -67,15 +68,25 @@ public final class WeightData {
         this.bonusCacheValue = value;
     }
 
+    public boolean isNaturallySpawned() {
+        return naturallySpawned;
+    }
+
+    public void setNaturallySpawned(boolean naturallySpawned) {
+        this.naturallySpawned = naturallySpawned;
+    }
+
     public void save(ValueOutput output) {
         output.putInt("weight", this.weight);
         output.putInt("ticksSinceEvaluation", this.ticksSinceEvaluation);
+        output.putBoolean("naturallySpawned", this.naturallySpawned);
     }
 
     public static WeightData load(ValueInput input) {
         int w = input.getIntOr("weight", defaultWeight());
         WeightData data = new WeightData(w);
         data.ticksSinceEvaluation = Math.max(0, input.getIntOr("ticksSinceEvaluation", 0));
+        data.naturallySpawned = input.getBooleanOr("naturallySpawned", false);
         return data;
     }
 }

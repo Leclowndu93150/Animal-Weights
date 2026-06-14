@@ -4,5 +4,6 @@ public enum Diet {
     HERBIVORE,
     CARNIVORE,
     OMNIVORE,
-    AQUATIC
+    AQUATIC,
+    NETHER
 }
