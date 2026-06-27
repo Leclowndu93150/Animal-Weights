@@ -6,12 +6,15 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
+import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
+import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -20,6 +23,7 @@ import java.util.function.BiConsumer;
 public final class ConfigManager {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     private static final long SAVE_DEBOUNCE_NANOS = 5_000_000_000L;
+    private static final Type DIETS_TYPE = new TypeToken<Map<String, Diet>>() {}.getType();
     private static final Set<String> NETHER_TAGGED = Set.of(
         "minecraft:strider"
     );
@@ -28,6 +32,7 @@ public final class ConfigManager {
     );
     private static AnimalWeightsConfig active = new AnimalWeightsConfig();
     private static Path activePath;
+    private static Path dietsCachePath;
     private static BiConsumer<String, Throwable> activeErrorLogger = (msg, t) -> {};
     private static final AtomicLong pendingSaveDeadline = new AtomicLong(0L);
 
@@ -39,7 +44,7 @@ public final class ConfigManager {
     }
 
     public static void scheduleSave() {
-        if (activePath == null) {
+        if (dietsCachePath == null) {
             return;
         }
         pendingSaveDeadline.set(System.nanoTime() + SAVE_DEBOUNCE_NANOS);
@@ -53,7 +58,7 @@ public final class ConfigManager {
         if (!pendingSaveDeadline.compareAndSet(deadline, 0L)) {
             return;
         }
-        saveNow();
+        saveDietsCache();
     }
 
     public static void saveNow() {
@@ -61,6 +66,57 @@ public final class ConfigManager {
             return;
         }
         pendingSaveDeadline.set(0L);
+        saveMainConfig();
+        saveDietsCache();
+    }
+
+    public static void loadOrCreate(Path configDir, BiConsumer<String, Throwable> errorLogger) {
+        activePath = configDir.resolve("animalweights.json");
+        dietsCachePath = configDir.resolve("animaldiets.json");
+        activeErrorLogger = errorLogger;
+
+        AnimalWeightsConfig parsed = null;
+        try {
+            if (Files.exists(activePath)) {
+                try (Reader r = Files.newBufferedReader(activePath)) {
+                    JsonObject json = JsonParser.parseReader(r).getAsJsonObject();
+                    parsed = GSON.fromJson(json, AnimalWeightsConfig.class);
+                } catch (JsonSyntaxException | IllegalStateException e) {
+                    errorLogger.accept("animalweights.json is invalid, using defaults", e);
+                }
+            }
+        } catch (IOException e) {
+            errorLogger.accept("Failed to load animalweights.json", e);
+        }
+        if (parsed == null) {
+            parsed = new AnimalWeightsConfig();
+        }
+
+        // Load diets from separate cache file.
+        // On first run after the split, migrate whatever GSON read from the old main config.
+        parsed.entityDiets = loadDietsCache(parsed.entityDiets, errorLogger);
+
+        active = sanitize(parsed);
+        saveMainConfig();
+        saveDietsCache();
+    }
+
+    private static Map<String, Diet> loadDietsCache(Map<String, Diet> migrationFallback, BiConsumer<String, Throwable> errorLogger) {
+        if (Files.exists(dietsCachePath)) {
+            try (Reader r = Files.newBufferedReader(dietsCachePath)) {
+                Map<String, Diet> loaded = GSON.fromJson(r, DIETS_TYPE);
+                return loaded != null ? loaded : new HashMap<>();
+            } catch (JsonSyntaxException | IllegalStateException | IOException e) {
+                errorLogger.accept("animaldiets.json is invalid, using empty cache", e);
+            }
+        }
+        return migrationFallback != null ? migrationFallback : new HashMap<>();
+    }
+
+    private static void saveMainConfig() {
+        if (activePath == null) {
+            return;
+        }
         try {
             Files.createDirectories(activePath.getParent());
             try (Writer w = Files.newBufferedWriter(activePath)) {
@@ -71,48 +127,17 @@ public final class ConfigManager {
         }
     }
 
-    public static void loadOrCreate(Path configDir, java.util.function.BiConsumer<String, Throwable> errorLogger) {
-        Path file = configDir.resolve("animalweights.json");
-        activePath = file;
-        activeErrorLogger = errorLogger;
+    private static void saveDietsCache() {
+        if (dietsCachePath == null) {
+            return;
+        }
         try {
-            if (Files.exists(file)) {
-                try (Reader r = Files.newBufferedReader(file)) {
-                    JsonObject json = JsonParser.parseReader(r).getAsJsonObject();
-                    AnimalWeightsConfig parsed = GSON.fromJson(json, AnimalWeightsConfig.class);
-                    if (parsed != null) {
-                        active = sanitize(parsed);
-                        mergeAndSave(file, json, active);
-                        return;
-                    }
-                } catch (JsonSyntaxException | IllegalStateException e) {
-                    errorLogger.accept("animalweights.json is invalid, using defaults", e);
-                }
-            }
-            Files.createDirectories(configDir);
-            active = sanitize(new AnimalWeightsConfig());
-            try (Writer w = Files.newBufferedWriter(file)) {
-                GSON.toJson(commentedConfig(active), w);
+            Files.createDirectories(dietsCachePath.getParent());
+            try (Writer w = Files.newBufferedWriter(dietsCachePath)) {
+                GSON.toJson(active.entityDiets, w);
             }
         } catch (IOException e) {
-            errorLogger.accept("Failed to load animalweights.json", e);
-        }
-    }
-
-    private static void mergeAndSave(Path file, JsonObject existing, AnimalWeightsConfig config) throws IOException {
-        JsonObject sanitized = commentedConfig(config);
-        boolean changed = false;
-        for (Map.Entry<String, JsonElement> entry : sanitized.entrySet()) {
-            JsonElement current = existing.get(entry.getKey());
-            if (current == null || !current.equals(entry.getValue())) {
-                existing.add(entry.getKey(), entry.getValue());
-                changed = true;
-            }
-        }
-        if (changed) {
-            try (Writer w = Files.newBufferedWriter(file)) {
-                GSON.toJson(existing, w);
-            }
+            activeErrorLogger.accept("Failed to save animaldiets.json", e);
         }
     }
 
@@ -179,10 +204,8 @@ public final class ConfigManager {
         addComment(out, "pauseAtNight", "Whether animals pause their weight cycle at night, like sleeping. Possible inputs: true, false.");
         addValue(out, values, "pauseAtNight");
 
-        addComment(out, "defaultDiet", "Diet used for animals not listed in entityDiets (modded animals). Possible inputs: HERBIVORE, CARNIVORE, OMNIVORE, AQUATIC, NETHER.");
+        addComment(out, "defaultDiet", "Diet used for animals not listed in animaldiets.json (modded animals). Possible inputs: HERBIVORE, CARNIVORE, OMNIVORE, AQUATIC, NETHER.");
         addValue(out, values, "defaultDiet");
-        addComment(out, "entityDiets", "Per-entity-type diet overrides. Starts empty; auto-populated from #animalweights:diet/* tags and biome spawn data on first sighting. Edit entries here to override. Herbivores need grazing, aquatic need water, carnivores skip grazing, omnivores skip both. NETHER animals (e.g. Strider) need lava and nylium/netherrack instead of water and grass, and only gain weight while in the Nether dimension; non-NETHER animals brought into the Nether have their weight cycle paused. Possible inputs: HERBIVORE, CARNIVORE, OMNIVORE, AQUATIC, NETHER.");
-        addValue(out, values, "entityDiets");
         addComment(out, "entityFilterMode", "How the mod decides which entities to track. BLACKLIST: every Animal is tracked except those in disabledEntities. WHITELIST: only entities in enabledEntities are tracked. VANILLA_ONLY: track only minecraft: entities (plus anything in enabledEntities, minus anything in disabledEntities). Possible inputs: BLACKLIST, WHITELIST, VANILLA_ONLY.");
         addValue(out, values, "entityFilterMode");
         addComment(out, "disabledEntities", "Entity type IDs (e.g. \"quark:shiba\") fully ignored by the mod: no weight tracking, no drop scaling, no sick tint, no breeding block, no tooltip. Used in BLACKLIST and VANILLA_ONLY modes.");
@@ -221,7 +244,7 @@ public final class ConfigManager {
         if (c.lightThreshold < 0) c.lightThreshold = 0;
         if (c.lightThreshold > 15) c.lightThreshold = 15;
         if (c.defaultDiet == null) c.defaultDiet = Diet.OMNIVORE;
-        if (c.entityDiets == null) c.entityDiets = new java.util.HashMap<>();
+        if (c.entityDiets == null) c.entityDiets = new HashMap<>();
         if (c.entityFilterMode == null) c.entityFilterMode = EntityFilterMode.BLACKLIST;
         if (c.disabledEntities == null) c.disabledEntities = new java.util.LinkedHashSet<>();
         if (c.enabledEntities == null) c.enabledEntities = new java.util.LinkedHashSet<>();
