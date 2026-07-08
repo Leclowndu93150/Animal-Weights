@@ -38,6 +38,9 @@ public abstract class LivingEntityDropMixin {
         if (AnimalWeightsRules.isDisabled(animal)) {
             return;
         }
+        if (!AnimalWeightsRules.isActive(animal)) {
+            return;
+        }
         int extra = ConfigManager.get().dropScalingMode.extraRolls(WeightAttachment.getWeight(animal));
         if (HabitatScanner.isNearWaterOrVillageCached(animal, level)) {
             extra += 1;

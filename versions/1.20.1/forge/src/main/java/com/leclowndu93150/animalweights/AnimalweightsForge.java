@@ -12,6 +12,7 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.fml.DistExecutor;
@@ -27,6 +28,7 @@ public class AnimalweightsForge {
         AnimalweightsItems.register(FMLJavaModLoadingContext.get().getModEventBus());
         AnimalweightsForgeNetwork.register();
         MinecraftForge.EVENT_BUS.addListener(AnimalweightsForge::onRegisterCommands);
+        MinecraftForge.EVENT_BUS.addListener(AnimalweightsForge::onServerStarting);
         MinecraftForge.EVENT_BUS.addListener(AnimalweightsForge::onStartTracking);
         MinecraftForge.EVENT_BUS.addListener(AnimalweightsForge::onPlayerLoggedIn);
         MinecraftForge.EVENT_BUS.addListener(AnimalweightsForge::onServerStopped);
@@ -53,6 +55,10 @@ public class AnimalweightsForge {
         if (event.getEntity() instanceof ServerPlayer player) {
             LootSyncDispatcher.sendSnapshot(player);
         }
+    }
+
+    private static void onServerStarting(ServerStartingEvent event) {
+        ConfigManager.reload();
     }
 
     private static void onServerStopped(ServerStoppedEvent event) {

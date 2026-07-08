@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "version": "${version}",
+  "name": "${mod_name}",
+  "description": "${description}",
+  "license": "${license}",
+  "entrypoints": {
+    "main": [
+      "com.leclowndu93150.animalweights.AnimalweightsFabric"
+    ],
+    "client": [
+      "com.leclowndu93150.animalweights.AnimalweightsFabricClient"
+    ],
+    "jade": [
+      "com.leclowndu93150.animalweights.compat.jade.AnimalWeightsJadePlugin"
+    ]
+  },
+  "mixins": [
+    "${mod_id}.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${fabric_loader_version}",
+    "minecraft": "${minecraft_version}",
+    "java": ">=${java_version}"
+  }
+}

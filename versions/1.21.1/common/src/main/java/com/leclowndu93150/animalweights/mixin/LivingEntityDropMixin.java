@@ -38,6 +38,9 @@ public abstract class LivingEntityDropMixin {
         if (AnimalWeightsRules.isDisabled(animal)) {
             return;
         }
+        if (!AnimalWeightsRules.isActive(animal)) {
+            return;
+        }
         if (!(self.level() instanceof ServerLevel level)) {
             return;
         }

@@ -31,6 +31,7 @@ public final class ConfigManager {
         "minecraft:happy_ghast"
     );
     private static AnimalWeightsConfig active = new AnimalWeightsConfig();
+    private static int generation = 0;
     private static Path activePath;
     private static Path dietsCachePath;
     private static BiConsumer<String, Throwable> activeErrorLogger = (msg, t) -> {};
@@ -41,6 +42,10 @@ public final class ConfigManager {
 
     public static AnimalWeightsConfig get() {
         return active;
+    }
+
+    public static int generation() {
+        return generation;
     }
 
     public static void scheduleSave() {
@@ -74,7 +79,19 @@ public final class ConfigManager {
         activePath = configDir.resolve("animalweights.json");
         dietsCachePath = configDir.resolve("animaldiets.json");
         activeErrorLogger = errorLogger;
+        load();
+    }
 
+    public static void reload() {
+        if (activePath == null) {
+            return;
+        }
+        pendingSaveDeadline.set(0L);
+        load();
+    }
+
+    private static void load() {
+        BiConsumer<String, Throwable> errorLogger = activeErrorLogger;
         AnimalWeightsConfig parsed = null;
         try {
             if (Files.exists(activePath)) {
@@ -97,6 +114,7 @@ public final class ConfigManager {
         parsed.entityDiets = loadDietsCache(parsed.entityDiets, errorLogger);
 
         active = sanitize(parsed);
+        generation++;
         saveMainConfig();
         saveDietsCache();
     }
@@ -175,11 +193,22 @@ public final class ConfigManager {
         addComment(out, "crowdLimit", "Maximum nearby animals allowed before crowding can hurt weight.");
         addValue(out, values, "crowdLimit");
 
+        addComment(out, "requireOpenSpace", "Whether animals need open space around them to count a habitat as good. Stops a mob sealed in a one-block hole from gaining weight. Possible inputs: true, false.");
+        addValue(out, values, "requireOpenSpace");
+        addComment(out, "minOpenSpace", "Minimum number of empty blocks within habitatScanRadius the animal must have around it when requireOpenSpace is on.");
+        addValue(out, values, "minOpenSpace");
+        addComment(out, "grazingBlocks", "Extra block IDs that count as grazing ground in addition to vanilla grass and moss. Example: [\"tfc:grass/loam\", \"tfc:grass/sandy_loam\"].");
+        addValue(out, values, "grazingBlocks");
+        addComment(out, "grazingBlockTags", "Block tag IDs that count as grazing ground in addition to vanilla grass and moss. Example: [\"c:grass_blocks\"].");
+        addValue(out, values, "grazingBlockTags");
+
         addComment(out, "enableProximityBonus", "Whether nearby water or matching habitat blocks can help animal weight. Possible inputs: true, false.");
         addValue(out, values, "enableProximityBonus");
         addComment(out, "proximityRadius", "Radius in blocks used for proximity habitat checks.");
         addValue(out, values, "proximityRadius");
 
+        addComment(out, "requireEngagement", "Whether naturally-spawned wild animals are ignored by the mod (no weight, no loot scaling, vanilla behavior) until a player engages with them by leashing or breeding them. Keeps wild herds cheap to run and stops buffed loot from animals you never raised. Bred, spawn-egg, and spawner animals are always tracked. Possible inputs: true, false.");
+        addValue(out, values, "requireEngagement");
         addComment(out, "naturalSpawnSicknessResistance", "Whether naturally-spawned animals (from chunk gen, structures, patrols) are more resistant to losing weight from a bad habitat. Halves the chance of every weight-loss roll. Bred animals, eggs, and spawners are unaffected. Possible inputs: true, false.");
         addValue(out, values, "naturalSpawnSicknessResistance");
         addComment(out, "cauldronCountsAsWater", "Whether a water cauldron near an animal satisfies the water habitat requirement. Each successful weight gain that relied on a cauldron drains one fill level; an empty cauldron must be refilled by hand. Lets you keep livestock in the Nether or anywhere away from natural water. Possible inputs: true, false.");
@@ -203,6 +232,8 @@ public final class ConfigManager {
 
         addComment(out, "pauseAtNight", "Whether animals pause their weight cycle at night, like sleeping. Possible inputs: true, false.");
         addValue(out, values, "pauseAtNight");
+        addComment(out, "netherAnimalsGainAnywhere", "Whether NETHER-diet animals (e.g. Striders) can gain weight in any dimension instead of only the Nether. When on, they use their lava + nylium habitat check wherever they are, so you can keep them in an Overworld pen. Possible inputs: true, false.");
+        addValue(out, values, "netherAnimalsGainAnywhere");
 
         addComment(out, "defaultDiet", "Diet used for animals not listed in animaldiets.json (modded animals). Possible inputs: HERBIVORE, CARNIVORE, OMNIVORE, AQUATIC, NETHER.");
         addValue(out, values, "defaultDiet");
@@ -238,6 +269,9 @@ public final class ConfigManager {
         if (c.habitatScanRadius < 1) c.habitatScanRadius = 1;
         if (c.crowdRadius < 1) c.crowdRadius = 1;
         if (c.crowdLimit < 1) c.crowdLimit = 1;
+        if (c.minOpenSpace < 0) c.minOpenSpace = 0;
+        if (c.grazingBlocks == null) c.grazingBlocks = new java.util.LinkedHashSet<>();
+        if (c.grazingBlockTags == null) c.grazingBlockTags = new java.util.LinkedHashSet<>();
         if (c.proximityRadius < 1) c.proximityRadius = 1;
         if (c.cauldronScanRadius < 1) c.cauldronScanRadius = 1;
         if (c.cauldronScanRadius > 32) c.cauldronScanRadius = 32;

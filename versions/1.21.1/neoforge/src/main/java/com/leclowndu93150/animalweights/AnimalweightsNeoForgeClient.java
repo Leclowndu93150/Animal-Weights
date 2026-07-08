@@ -21,8 +21,8 @@ public final class AnimalweightsNeoForgeClient {
         NeoForge.EVENT_BUS.addListener(AnimalweightsNeoForgeClient::onRenderStage);
     }
 
-    public static void applyWeight(int entityId, int weight) {
-        WeightSyncClient.apply(entityId, weight);
+    public static void applyWeight(int entityId, int weight, boolean tracked) {
+        WeightSyncClient.apply(entityId, weight, tracked);
     }
 
     public static void applyLootEntry(ResourceLocation type, List<ResourceLocation> items) {

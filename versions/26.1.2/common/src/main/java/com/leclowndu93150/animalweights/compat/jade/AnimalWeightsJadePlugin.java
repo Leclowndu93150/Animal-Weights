@@ -21,19 +21,20 @@ import snownee.jade.api.config.IPluginConfig;
 public class AnimalWeightsJadePlugin implements IWailaPlugin {
     private static final Identifier UID = Identifier.fromNamespaceAndPath(Animalweights.MOD_ID, "animal_condition");
     private static final String DATA_KEY = "animalweights_ticks_since_eval";
-    private static final Provider PROVIDER = new Provider();
+    private static final DataProvider DATA_PROVIDER = new DataProvider();
+    private static final ComponentProvider COMPONENT_PROVIDER = new ComponentProvider();
 
     @Override
     public void register(IWailaCommonRegistration registration) {
-        registration.registerEntityDataProvider(PROVIDER, Animal.class);
+        registration.registerEntityDataProvider(DATA_PROVIDER, Animal.class);
     }
 
     @Override
     public void registerClient(IWailaClientRegistration registration) {
-        registration.registerEntityComponent(PROVIDER, Animal.class);
+        registration.registerEntityComponent(COMPONENT_PROVIDER, Animal.class);
     }
 
-    private static final class Provider implements IComponentProvider<EntityAccessor>, IServerDataProvider<EntityAccessor> {
+    private static final class DataProvider implements IServerDataProvider<EntityAccessor> {
         @Override
         public void appendServerData(CompoundTag data, EntityAccessor accessor) {
             if (accessor.getEntity() instanceof Animal animal) {
@@ -41,6 +42,13 @@ public class AnimalWeightsJadePlugin implements IWailaPlugin {
             }
         }
 
+        @Override
+        public Identifier getUid() {
+            return UID;
+        }
+    }
+
+    private static final class ComponentProvider implements IComponentProvider<EntityAccessor> {
         @Override
         public void appendTooltip(ITooltip tooltip, EntityAccessor accessor, IPluginConfig config) {
             if (accessor.getEntity() instanceof Animal animal) {

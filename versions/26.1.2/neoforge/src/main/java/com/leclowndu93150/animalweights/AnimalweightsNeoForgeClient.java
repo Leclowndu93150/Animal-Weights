@@ -22,8 +22,8 @@ public final class AnimalweightsNeoForgeClient {
     public static void init() {
     }
 
-    public static void applyWeight(int entityId, int weight) {
-        WeightSyncClient.apply(entityId, weight);
+    public static void applyWeight(int entityId, int weight, boolean tracked) {
+        WeightSyncClient.apply(entityId, weight, tracked);
     }
 
     public static void applyLootEntry(Identifier type, List<Identifier> items) {
@@ -37,7 +37,7 @@ public final class AnimalweightsNeoForgeClient {
 
     @SubscribeEvent
     private static void registerPayloadHandlers(RegisterClientPayloadHandlersEvent event) {
-        event.register(WeightSyncPayload.TYPE, (payload, ctx) -> applyWeight(payload.entityId, payload.weight));
+        event.register(WeightSyncPayload.TYPE, (payload, ctx) -> applyWeight(payload.entityId, payload.weight, payload.tracked));
         event.register(LootEntryPayload.TYPE, (payload, ctx) -> applyLootEntry(payload.entityType, payload.items));
         event.register(LootSnapshotPayload.TYPE, (payload, ctx) -> applyLootSnapshot(payload.entries));
     }

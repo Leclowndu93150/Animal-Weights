@@ -16,6 +16,7 @@ import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -32,6 +33,7 @@ public class AnimalweightsNeoForge {
         AnimalweightsItems.register(modBus);
         modBus.addListener(AnimalweightsNeoForge::onRegisterPayloads);
         NeoForge.EVENT_BUS.addListener(AnimalweightsNeoForge::onRegisterCommands);
+        NeoForge.EVENT_BUS.addListener(AnimalweightsNeoForge::onServerStarting);
         NeoForge.EVENT_BUS.addListener(AnimalweightsNeoForge::onStartTracking);
         NeoForge.EVENT_BUS.addListener(AnimalweightsNeoForge::onPlayerLoggedIn);
         NeoForge.EVENT_BUS.addListener(AnimalweightsNeoForge::onServerStopped);
@@ -40,11 +42,9 @@ public class AnimalweightsNeoForge {
         initClient();
 
         WeightSyncDispatcher.install(animal ->
-            PacketDistributor.sendToPlayersTrackingEntity(animal,
-                new WeightSyncPayload(animal.getId(), WeightAttachment.getWeight(animal))));
+            PacketDistributor.sendToPlayersTrackingEntity(animal, WeightSyncPayload.of(animal)));
         WeightSyncDispatcher.installPlayer((player, animal) ->
-            PacketDistributor.sendToPlayer(player,
-                new WeightSyncPayload(animal.getId(), WeightAttachment.getWeight(animal))));
+            PacketDistributor.sendToPlayer(player, WeightSyncPayload.of(animal)));
         LootSyncDispatcher.installBroadcaster((type, items) ->
             PacketDistributor.sendToAllPlayers(new LootEntryPayload(type, items)));
         LootSyncDispatcher.installSnapshot(player ->
@@ -83,7 +83,7 @@ public class AnimalweightsNeoForge {
         }
 
         private static void applyWeight(WeightSyncPayload payload) {
-            AnimalweightsNeoForgeClient.applyWeight(payload.entityId, payload.weight);
+            AnimalweightsNeoForgeClient.applyWeight(payload.entityId, payload.weight, payload.tracked);
         }
 
         private static void applyLootEntry(LootEntryPayload payload) {
@@ -109,6 +109,10 @@ public class AnimalweightsNeoForge {
         if (event.getEntity() instanceof ServerPlayer player) {
             LootSyncDispatcher.sendSnapshot(player);
         }
+    }
+
+    private static void onServerStarting(ServerStartingEvent event) {
+        ConfigManager.reload();
     }
 
     private static void onServerStopped(ServerStoppedEvent event) {

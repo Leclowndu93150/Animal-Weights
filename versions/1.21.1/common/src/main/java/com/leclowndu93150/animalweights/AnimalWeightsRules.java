@@ -6,10 +6,35 @@ import com.leclowndu93150.animalweights.config.Diet;
 import com.leclowndu93150.animalweights.config.EntityFilterMode;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.level.Level;
 
 public final class AnimalWeightsRules {
     private AnimalWeightsRules() {
+    }
+
+    public static boolean isActive(Animal animal) {
+        if (!ConfigManager.get().requireEngagement) {
+            return true;
+        }
+        WeightData data = WeightAttachment.get(animal);
+        if (!data.isNaturallySpawned() || data.isEngaged()) {
+            return true;
+        }
+        if (animal.isLeashed()) {
+            data.setEngaged(true);
+            WeightAttachment.syncToTrackers(animal);
+            return true;
+        }
+        return false;
+    }
+
+    public static void markEngaged(Animal animal) {
+        WeightData data = WeightAttachment.get(animal);
+        if (!data.isEngaged()) {
+            data.setEngaged(true);
+            WeightAttachment.syncToTrackers(animal);
+        }
     }
 
     public static boolean isDisabled(Entity entity) {

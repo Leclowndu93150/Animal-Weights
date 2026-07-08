@@ -23,6 +23,9 @@ public final class WeightTickLogic {
         if (AnimalWeightsRules.isDisabled(animal)) {
             return;
         }
+        if (!AnimalWeightsRules.isActive(animal)) {
+            return;
+        }
         if (AnimalWeightsRules.isSleeping(level)) {
             return;
         }
@@ -77,10 +80,10 @@ public final class WeightTickLogic {
     public static int scoreHabitat(Animal animal, Level level, AnimalWeightsConfig cfg, Diet diet, boolean water) {
         BlockPos pos = animal.blockPosition();
         boolean light = HabitatScanner.hasBrightLight(level, pos);
-        boolean notCrowded = !HabitatScanner.isCrowded(animal);
+        boolean space = hasSpace(animal, level, cfg);
         int score = 0;
         if (light) score++;
-        if (notCrowded) score++;
+        if (space) score++;
         switch (diet) {
             case HERBIVORE -> {
                 if (water) score++;
@@ -98,6 +101,7 @@ public final class WeightTickLogic {
                 score++;
             }
             case NETHER -> {
+                score++;
                 if (HabitatScanner.hasLavaNearby(level, pos, cfg.habitatScanRadius)) score++;
                 if (HabitatScanner.hasNetherGroundNearby(level, pos, cfg.habitatScanRadius)) score++;
             }
@@ -105,9 +109,22 @@ public final class WeightTickLogic {
         return score;
     }
 
+    public static boolean hasSpace(Animal animal, Level level, AnimalWeightsConfig cfg) {
+        if (HabitatScanner.isCrowded(animal)) {
+            return false;
+        }
+        if (cfg.requireOpenSpace) {
+            return HabitatScanner.hasOpenSpace(level, animal.blockPosition(), cfg.habitatScanRadius, cfg.minOpenSpace);
+        }
+        return true;
+    }
+
     public static boolean isOutOfElement(Level level, Diet diet) {
         boolean inNether = level.dimension() == Level.NETHER;
         if (diet == Diet.NETHER) {
+            if (ConfigManager.get().netherAnimalsGainAnywhere) {
+                return false;
+            }
             return !inNether;
         }
         return inNether;

@@ -24,6 +24,7 @@ public final class WeightData {
     private long bonusCacheTick = Long.MIN_VALUE;
     private boolean bonusCacheValue;
     private boolean naturallySpawned;
+    private boolean engaged;
 
     public WeightData() {
         this(defaultWeight());
@@ -76,10 +77,19 @@ public final class WeightData {
         this.naturallySpawned = naturallySpawned;
     }
 
+    public boolean isEngaged() {
+        return engaged;
+    }
+
+    public void setEngaged(boolean engaged) {
+        this.engaged = engaged;
+    }
+
     public void save(ValueOutput output) {
         output.putInt("weight", this.weight);
         output.putInt("ticksSinceEvaluation", this.ticksSinceEvaluation);
         output.putBoolean("naturallySpawned", this.naturallySpawned);
+        output.putBoolean("engaged", this.engaged);
     }
 
     public static WeightData load(ValueInput input) {
@@ -87,6 +97,7 @@ public final class WeightData {
         WeightData data = new WeightData(w);
         data.ticksSinceEvaluation = Math.max(0, input.getIntOr("ticksSinceEvaluation", 0));
         data.naturallySpawned = input.getBooleanOr("naturallySpawned", false);
+        data.engaged = input.getBooleanOr("engaged", false);
         return data;
     }
 }

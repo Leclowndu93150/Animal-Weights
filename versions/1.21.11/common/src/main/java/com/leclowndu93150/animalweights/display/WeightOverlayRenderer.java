@@ -1,6 +1,7 @@
 package com.leclowndu93150.animalweights.display;
 
 import com.leclowndu93150.animalweights.WeightAttachment;
+import com.leclowndu93150.animalweights.network.WeightSyncClient;
 import com.leclowndu93150.animalweights.config.AnimalWeightsConfig;
 import com.leclowndu93150.animalweights.config.ConfigManager;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -54,6 +55,10 @@ public final class WeightOverlayRenderer {
 
         for (var entity : mc.level.entitiesForRendering()) {
             if (!(entity instanceof Animal animal) || animal.isBaby() || animal.isRemoved()) {
+                continue;
+            }
+            if (!WeightSyncClient.isTracked(animal)) {
+                OverlayFadeTracker.clear(animal);
                 continue;
             }
             int weight = WeightAttachment.getWeight(animal);

@@ -36,15 +36,12 @@ public class AnimalweightsFabric implements ModInitializer {
             AnimalWeightsCommand.register(dispatcher));
 
         WeightSyncDispatcher.install(animal -> {
-            int weight = WeightAttachment.getWeight(animal);
             for (var player : PlayerLookup.tracking(animal)) {
-                ServerPlayNetworking.send(player, WeightSyncPayload.CHANNEL, encodeWeight(animal.getId(), weight));
+                ServerPlayNetworking.send(player, WeightSyncPayload.CHANNEL, encodeWeight(animal));
             }
         });
-        WeightSyncDispatcher.installPlayer((player, animal) -> {
-            int weight = WeightAttachment.getWeight(animal);
-            ServerPlayNetworking.send(player, WeightSyncPayload.CHANNEL, encodeWeight(animal.getId(), weight));
-        });
+        WeightSyncDispatcher.installPlayer((player, animal) ->
+            ServerPlayNetworking.send(player, WeightSyncPayload.CHANNEL, encodeWeight(animal)));
 
         LootSyncDispatcher.installBroadcaster((type, items) -> {
             if (activeServer == null) return;
@@ -62,6 +59,7 @@ public class AnimalweightsFabric implements ModInitializer {
         });
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
             LootSyncDispatcher.sendSnapshot(handler.player));
+        ServerLifecycleEvents.SERVER_STARTING.register(server -> ConfigManager.reload());
         ServerLifecycleEvents.SERVER_STARTED.register(server -> activeServer = server);
         ServerTickEvents.END_SERVER_TICK.register(server -> ConfigManager.tickPendingSave());
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> ConfigManager.saveNow());
@@ -71,10 +69,12 @@ public class AnimalweightsFabric implements ModInitializer {
         });
     }
 
-    private static FriendlyByteBuf encodeWeight(int entityId, int weight) {
+    private static FriendlyByteBuf encodeWeight(Animal animal) {
+        WeightSyncPayload payload = WeightSyncPayload.of(animal);
         FriendlyByteBuf buf = PacketByteBufs.create();
-        buf.writeVarInt(entityId);
-        buf.writeVarInt(weight);
+        buf.writeVarInt(payload.entityId);
+        buf.writeVarInt(payload.weight);
+        buf.writeBoolean(payload.tracked);
         return buf;
     }
 

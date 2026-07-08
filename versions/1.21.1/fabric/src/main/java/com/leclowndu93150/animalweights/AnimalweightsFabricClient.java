@@ -16,7 +16,7 @@ public class AnimalweightsFabricClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         ClientPlayNetworking.registerGlobalReceiver(WeightSyncPayload.TYPE, (payload, ctx) ->
-            WeightSyncClient.apply(payload.entityId, payload.weight));
+            WeightSyncClient.apply(payload.entityId, payload.weight, payload.tracked));
         ClientPlayNetworking.registerGlobalReceiver(LootEntryPayload.TYPE, (payload, ctx) ->
             ctx.client().execute(() -> LootCache.putClient(payload.entityType, payload.items)));
         ClientPlayNetworking.registerGlobalReceiver(LootSnapshotPayload.TYPE, (payload, ctx) ->

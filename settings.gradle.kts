@@ -19,6 +19,11 @@ rootProject.name = "Animal Weights"
 prism {
     sharedCommon("versions/common")
 
+    version("26.2") {
+        common()
+        fabric()
+        neoforge()
+    }
     version("26.1.2") {
         common()
         fabric()

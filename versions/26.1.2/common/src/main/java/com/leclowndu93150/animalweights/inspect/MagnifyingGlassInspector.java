@@ -4,7 +4,9 @@ import com.leclowndu93150.animalweights.AnimalWeightsRules;
 import com.leclowndu93150.animalweights.WeightAttachment;
 import com.leclowndu93150.animalweights.config.AnimalWeightsConfig;
 import com.leclowndu93150.animalweights.config.ConfigManager;
+import com.leclowndu93150.animalweights.config.Diet;
 import com.leclowndu93150.animalweights.habitat.HabitatScanner;
+import com.leclowndu93150.animalweights.habitat.WeightTickLogic;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -25,6 +27,14 @@ public final class MagnifyingGlassInspector {
     public static List<Component> buildChatLines(Animal animal) {
         if (AnimalWeightsRules.isDisabled(animal)) {
             return List.of();
+        }
+        if (!AnimalWeightsRules.isActive(animal)) {
+            return List.of(
+                Component.literal(animal.getType().getDescription().getString())
+                    .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD),
+                Component.literal("Wild — leash or breed it to start tracking weight")
+                    .withStyle(ChatFormatting.GRAY)
+            );
         }
         Snapshot s = snapshot(animal, -1);
         List<Component> lines = new ArrayList<>(5);
@@ -47,6 +57,9 @@ public final class MagnifyingGlassInspector {
         if (AnimalWeightsRules.isDisabled(animal)) {
             return List.of();
         }
+        if (!AnimalWeightsRules.isActive(animal)) {
+            return List.of();
+        }
         Snapshot s = snapshot(animal, elapsedTicksOverride);
         List<Component> lines = new ArrayList<>(4);
         lines.add(weightLine(s));
@@ -64,17 +77,31 @@ public final class MagnifyingGlassInspector {
     }
 
     private static MutableComponent checksLine(Snapshot s) {
-        return Component.literal("Light ").withStyle(ChatFormatting.GRAY)
-            .append(s.light ? CHECK : CROSS)
-            .append(Component.literal("  Water ").withStyle(ChatFormatting.GRAY))
-            .append(s.water ? CHECK : CROSS)
-            .append(Component.literal("  Grazing ").withStyle(ChatFormatting.GRAY))
-            .append(s.grazing ? CHECK : CROSS)
-            .append(Component.literal("  Space ").withStyle(ChatFormatting.GRAY))
+        MutableComponent line = Component.literal("Light ").withStyle(ChatFormatting.GRAY)
+            .append(s.light ? CHECK : CROSS);
+        if (s.diet == Diet.NETHER) {
+            line.append(Component.literal("  Lava ").withStyle(ChatFormatting.GRAY))
+                .append(s.lava ? CHECK : CROSS)
+                .append(Component.literal("  Nylium ").withStyle(ChatFormatting.GRAY))
+                .append(s.netherGround ? CHECK : CROSS);
+        } else if (s.diet == Diet.AQUATIC) {
+            line.append(Component.literal("  Water ").withStyle(ChatFormatting.GRAY))
+                .append(s.water ? CHECK : CROSS);
+        } else {
+            line.append(Component.literal("  Water ").withStyle(ChatFormatting.GRAY))
+                .append(s.water ? CHECK : CROSS)
+                .append(Component.literal("  Grazing ").withStyle(ChatFormatting.GRAY))
+                .append(s.grazing ? CHECK : CROSS);
+        }
+        return line.append(Component.literal("  Space ").withStyle(ChatFormatting.GRAY))
             .append(s.notCrowded ? CHECK : CROSS);
     }
 
     private static MutableComponent nextLine(Snapshot s) {
+        if (s.outOfElement) {
+            return Component.literal(s.diet == Diet.NETHER ? "Waiting to return to the Nether" : "Paused in the Nether")
+                .withStyle(ChatFormatting.DARK_AQUA);
+        }
         if (s.sleeping) {
             return Component.literal("Resting until dawn")
                 .withStyle(ChatFormatting.DARK_AQUA);
@@ -89,15 +116,25 @@ public final class MagnifyingGlassInspector {
         AnimalWeightsConfig cfg = ConfigManager.get();
         Level level = animal.level();
         BlockPos pos = animal.blockPosition();
+        Diet diet = AnimalWeightsRules.dietOf(animal);
         Snapshot s = new Snapshot();
+        s.diet = diet;
         s.weight = WeightAttachment.getWeight(animal);
         s.maxWeight = cfg.maxWeight;
         s.sick = s.weight <= cfg.sickThreshold;
         s.light = HabitatScanner.hasBrightLight(level, pos);
-        s.water = HabitatScanner.hasWaterNearby(level, pos, cfg.habitatScanRadius);
+        s.notCrowded = WeightTickLogic.hasSpace(animal, level, cfg);
+        boolean naturalWater = diet != Diet.NETHER && HabitatScanner.hasWaterNearby(level, pos, cfg.habitatScanRadius);
+        boolean water = naturalWater;
+        if (!naturalWater && diet != Diet.NETHER && cfg.cauldronCountsAsWater) {
+            water = HabitatScanner.findFullWaterCauldronNearby(level, pos, cfg.cauldronScanRadius) != null;
+        }
+        s.water = water;
         s.grazing = HabitatScanner.hasGrazingNearby(level, pos, cfg.habitatScanRadius);
-        s.notCrowded = !HabitatScanner.isCrowded(animal);
-        int score = (s.light ? 1 : 0) + (s.water ? 1 : 0) + (s.grazing ? 1 : 0) + (s.notCrowded ? 1 : 0);
+        s.lava = diet == Diet.NETHER && HabitatScanner.hasLavaNearby(level, pos, cfg.habitatScanRadius);
+        s.netherGround = diet == Diet.NETHER && HabitatScanner.hasNetherGroundNearby(level, pos, cfg.habitatScanRadius);
+        s.outOfElement = WeightTickLogic.isOutOfElement(level, diet);
+        int score = WeightTickLogic.scoreHabitat(animal, level, cfg, diet, water);
         int interval = Math.max(1, cfg.weightTickIntervalTicks);
         int elapsed = elapsedTicksOverride >= 0 ? elapsedTicksOverride : WeightAttachment.get(animal).getTicksSinceEvaluation();
         int ticksUntilNext = Math.max(0, interval - elapsed);
@@ -121,14 +158,18 @@ public final class MagnifyingGlassInspector {
     }
 
     private static final class Snapshot {
+        Diet diet;
         int weight;
         int maxWeight;
         boolean sick;
         boolean light;
         boolean water;
         boolean grazing;
+        boolean lava;
+        boolean netherGround;
         boolean notCrowded;
         boolean sleeping;
+        boolean outOfElement;
         long secondsUntilNext;
         Component outcome;
     }

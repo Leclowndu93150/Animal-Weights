@@ -23,7 +23,8 @@ public class AnimalweightsFabricClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(WeightSyncPayload.CHANNEL, (client, handler, buf, responseSender) -> {
             int entityId = buf.readVarInt();
             int weight = buf.readVarInt();
-            client.execute(() -> WeightSyncClient.apply(entityId, weight));
+            boolean tracked = buf.readBoolean();
+            client.execute(() -> WeightSyncClient.apply(entityId, weight, tracked));
         });
         ClientPlayNetworking.registerGlobalReceiver(LootSyncPayload.ENTRY_CHANNEL, (client, handler, buf, responseSender) -> {
             ResourceLocation type = buf.readResourceLocation();

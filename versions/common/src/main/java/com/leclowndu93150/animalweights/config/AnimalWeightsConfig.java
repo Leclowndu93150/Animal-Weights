@@ -24,9 +24,16 @@ public final class AnimalWeightsConfig {
     public int crowdRadius = 2;
     public int crowdLimit = 6;
 
+    public boolean requireOpenSpace = true;
+    public int minOpenSpace = 8;
+
+    public Set<String> grazingBlocks = new LinkedHashSet<>();
+    public Set<String> grazingBlockTags = new LinkedHashSet<>();
+
     public boolean enableProximityBonus = true;
     public int proximityRadius = 6;
 
+    public boolean requireEngagement = true;
     public boolean naturalSpawnSicknessResistance = true;
     public boolean cauldronCountsAsWater = true;
     public int cauldronScanRadius = 8;
@@ -40,6 +47,7 @@ public final class AnimalWeightsConfig {
     public double overlayRange = 8.0;
 
     public boolean pauseAtNight = true;
+    public boolean netherAnimalsGainAnywhere = false;
 
     public Diet defaultDiet = Diet.OMNIVORE;
     public Map<String, Diet> entityDiets = new HashMap<>();

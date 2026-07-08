@@ -93,6 +93,13 @@ public abstract class AnimalMixin extends AgeableMob implements WeightHolder {
         }
     }
 
+    @Inject(method = "spawnChildFromBreeding", at = @At("HEAD"))
+    private void animalweights$engageOnBreed(ServerLevel level, Animal partner, CallbackInfo ci) {
+        Animal self = (Animal) (Object) this;
+        AnimalWeightsRules.markEngaged(self);
+        AnimalWeightsRules.markEngaged(partner);
+    }
+
     @Inject(method = "canFallInLove", at = @At("HEAD"), cancellable = true)
     private void animalweights$blockSickBreeding(CallbackInfoReturnable<Boolean> cir) {
         Animal self = (Animal) (Object) this;
@@ -108,6 +115,9 @@ public abstract class AnimalMixin extends AgeableMob implements WeightHolder {
     private void animalweights$scaleXp(ServerLevel level, CallbackInfoReturnable<Integer> cir) {
         Animal self = (Animal) (Object) this;
         if (AnimalWeightsRules.isDisabled(self)) {
+            return;
+        }
+        if (!AnimalWeightsRules.isActive(self)) {
             return;
         }
         int base = cir.getReturnValueI();

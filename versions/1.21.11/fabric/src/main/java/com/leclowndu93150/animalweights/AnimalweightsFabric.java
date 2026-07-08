@@ -37,16 +37,13 @@ public class AnimalweightsFabric implements ModInitializer {
             AnimalWeightsCommand.register(dispatcher));
 
         WeightSyncDispatcher.install(animal -> {
-            int weight = WeightAttachment.getWeight(animal);
-            WeightSyncPayload payload = new WeightSyncPayload(animal.getId(), weight);
+            WeightSyncPayload payload = WeightSyncPayload.of(animal);
             for (var player : PlayerLookup.tracking(animal)) {
                 ServerPlayNetworking.send(player, payload);
             }
         });
-        WeightSyncDispatcher.installPlayer((player, animal) -> {
-            int weight = WeightAttachment.getWeight(animal);
-            ServerPlayNetworking.send(player, new WeightSyncPayload(animal.getId(), weight));
-        });
+        WeightSyncDispatcher.installPlayer((player, animal) ->
+            ServerPlayNetworking.send(player, WeightSyncPayload.of(animal)));
 
         LootSyncDispatcher.installBroadcaster((type, items) -> {
             if (activeServer == null) return;
@@ -65,6 +62,7 @@ public class AnimalweightsFabric implements ModInitializer {
         });
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
             LootSyncDispatcher.sendSnapshot(handler.player));
+        ServerLifecycleEvents.SERVER_STARTING.register(server -> ConfigManager.reload());
         ServerLifecycleEvents.SERVER_STARTED.register(server -> activeServer = server);
         ServerTickEvents.END_SERVER_TICK.register(server -> ConfigManager.tickPendingSave());
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> ConfigManager.saveNow());

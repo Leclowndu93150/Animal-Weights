@@ -61,20 +61,16 @@ public final class AnimalweightsForgeNetwork {
             Optional.of(NetworkDirection.PLAY_TO_CLIENT)
         );
 
-        WeightSyncDispatcher.install(animal -> {
-            int weight = WeightAttachment.getWeight(animal);
+        WeightSyncDispatcher.install(animal ->
             CHANNEL.send(
                 PacketDistributor.TRACKING_ENTITY.with(() -> animal),
-                new WeightSyncPayload(animal.getId(), weight)
-            );
-        });
-        WeightSyncDispatcher.installPlayer((player, animal) -> {
-            int weight = WeightAttachment.getWeight(animal);
+                WeightSyncPayload.of(animal)
+            ));
+        WeightSyncDispatcher.installPlayer((player, animal) ->
             CHANNEL.send(
                 PacketDistributor.PLAYER.with(() -> player),
-                new WeightSyncPayload(animal.getId(), weight)
-            );
-        });
+                WeightSyncPayload.of(animal)
+            ));
         LootSyncDispatcher.installBroadcaster((type, items) ->
             CHANNEL.send(PacketDistributor.ALL.noArg(), new LootEntryMessage(type, items)));
         LootSyncDispatcher.installSnapshot(player ->
@@ -84,15 +80,16 @@ public final class AnimalweightsForgeNetwork {
     private static void encodeWeight(WeightSyncPayload payload, FriendlyByteBuf buf) {
         buf.writeVarInt(payload.entityId);
         buf.writeVarInt(payload.weight);
+        buf.writeBoolean(payload.tracked);
     }
 
     private static WeightSyncPayload decodeWeight(FriendlyByteBuf buf) {
-        return new WeightSyncPayload(buf.readVarInt(), buf.readVarInt());
+        return new WeightSyncPayload(buf.readVarInt(), buf.readVarInt(), buf.readBoolean());
     }
 
     private static void handleWeight(WeightSyncPayload payload, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-            () -> () -> AnimalweightsForgeClient.applyWeight(payload.entityId, payload.weight)));
+            () -> () -> AnimalweightsForgeClient.applyWeight(payload.entityId, payload.weight, payload.tracked)));
         ctx.get().setPacketHandled(true);
     }
 

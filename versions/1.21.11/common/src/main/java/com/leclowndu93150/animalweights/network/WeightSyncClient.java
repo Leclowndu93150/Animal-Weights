@@ -6,11 +6,25 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.animal.Animal;
 
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 public final class WeightSyncClient {
+    private static final Set<Integer> UNTRACKED = ConcurrentHashMap.newKeySet();
+
     private WeightSyncClient() {
     }
 
-    public static void apply(int entityId, int weight) {
+    public static boolean isTracked(Animal animal) {
+        return !UNTRACKED.contains(animal.getId());
+    }
+
+    public static void apply(int entityId, int weight, boolean tracked) {
+        if (tracked) {
+            UNTRACKED.remove(entityId);
+        } else {
+            UNTRACKED.add(entityId);
+        }
         Minecraft client = Minecraft.getInstance();
         client.execute(() -> {
             ClientLevel level = client.level;

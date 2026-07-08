@@ -55,8 +55,7 @@ public final class HabitatScanner {
             for (int dz = -radius; dz <= radius; dz++) {
                 for (int dy = -2; dy <= 1; dy++) {
                     cursor.set(cx + dx, cy + dy, cz + dz);
-                    BlockState state = level.getBlockState(cursor);
-                    if (state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.MOSS_BLOCK)) {
+                    if (GrazingBlocks.matches(level.getBlockState(cursor))) {
                         return true;
                     }
                 }
@@ -117,6 +116,31 @@ public final class HabitatScanner {
         return nearby.size() > limit;
     }
 
+    public static boolean hasOpenSpace(Level level, BlockPos center, int radius, int required) {
+        if (required <= 0) {
+            return true;
+        }
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        int cx = center.getX();
+        int cy = center.getY();
+        int cz = center.getZ();
+        int open = 0;
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                for (int dy = 0; dy <= 1; dy++) {
+                    cursor.set(cx + dx, cy + dy, cz + dz);
+                    if (level.getBlockState(cursor).getCollisionShape(level, cursor).isEmpty()) {
+                        open++;
+                        if (open >= required) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     public static int quickHabitatScore(Level level, BlockPos pos) {
         int score = 0;
         if (level.getMaxLocalRawBrightness(pos) >= ConfigManager.get().lightThreshold) score++;
@@ -136,8 +160,7 @@ public final class HabitatScanner {
                 }
                 if (!foundGrazing) {
                     cursor.set(cx + dx, cy - 1, cz + dz);
-                    BlockState state = level.getBlockState(cursor);
-                    if (state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.MOSS_BLOCK)) {
+                    if (GrazingBlocks.matches(level.getBlockState(cursor))) {
                         foundGrazing = true;
                     }
                 }
