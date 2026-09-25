@@ -48,6 +48,7 @@ public final class AnimalWeightsConfig {
 
     public OverlayMode overlayMode = OverlayMode.LOOKING;
     public double overlayRange = 8.0;
+    public Set<String> overlayRequiredItems = new LinkedHashSet<>();
 
     public boolean pauseAtNight = true;
     public boolean netherAnimalsGainAnywhere = false;

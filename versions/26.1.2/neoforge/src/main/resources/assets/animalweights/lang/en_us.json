@@ -1,4 +1,23 @@
 {
   "item.animalweights.magnifying_glass": "Magnifying Glass",
-  "itemGroup.animalweights.main": "Animal Weights"
+  "itemGroup.animalweights.main": "Animal Weights",
+  "item.animalweights.magnifying_glass.tooltip": "Right-click an animal to inspect",
+  "animalweights.inspect.wild": "Wild — leash or breed it to start tracking weight",
+  "animalweights.inspect.sick": "Sick — won't breed",
+  "animalweights.inspect.weight": "Weight %s",
+  "animalweights.inspect.light": "Light",
+  "animalweights.inspect.water": "Water",
+  "animalweights.inspect.grazing": "Grazing",
+  "animalweights.inspect.lava": "Lava",
+  "animalweights.inspect.nylium": "Nylium",
+  "animalweights.inspect.space": "Space",
+  "animalweights.inspect.waiting_for_nether": "Waiting to return to the Nether",
+  "animalweights.inspect.paused_in_nether": "Paused in the Nether",
+  "animalweights.inspect.resting": "Resting until dawn",
+  "animalweights.inspect.next": "Next %s → %s",
+  "animalweights.inspect.seconds": "%ss",
+  "animalweights.inspect.outcome.gain": "gain",
+  "animalweights.inspect.outcome.stable": "stable",
+  "animalweights.inspect.outcome.minor_loss": "minor loss",
+  "animalweights.inspect.outcome.severe_loss": "severe loss"
 }

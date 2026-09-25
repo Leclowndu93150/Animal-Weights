@@ -1,5 +1,6 @@
 package com.leclowndu93150.animalweights.compat.jade;
 
+import com.leclowndu93150.animalweights.AnimalWeightsRules;
 import com.leclowndu93150.animalweights.Animalweights;
 import com.leclowndu93150.animalweights.WeightAttachment;
 import com.leclowndu93150.animalweights.habitat.HabitatScanner;
@@ -23,6 +24,7 @@ public class AnimalWeightsJadePlugin implements IWailaPlugin {
     private static final ResourceLocation UID = ResourceLocation.fromNamespaceAndPath(Animalweights.MOD_ID, "animal_condition");
     private static final String DATA_KEY = "animalweights_ticks_since_eval";
     private static final String TROUGH_KEY = "animalweights_trough_food";
+    private static final String WILD_KEY = "animalweights_wild";
     private static final Provider PROVIDER = new Provider();
 
     @Override
@@ -41,6 +43,7 @@ public class AnimalWeightsJadePlugin implements IWailaPlugin {
             if (accessor.getEntity() instanceof Animal animal) {
                 data.putInt(DATA_KEY, WeightAttachment.get(animal).getTicksSinceEvaluation());
                 data.putBoolean(TROUGH_KEY, HabitatScanner.hasUsableFeedingTrough(animal));
+                data.putBoolean(WILD_KEY, !AnimalWeightsRules.isActive(animal));
             }
         }
 
@@ -49,7 +52,8 @@ public class AnimalWeightsJadePlugin implements IWailaPlugin {
             if (accessor.getEntity() instanceof Animal animal) {
                 int serverTicks = accessor.getServerData().getInt(DATA_KEY);
                 boolean troughFood = accessor.getServerData().getBoolean(TROUGH_KEY);
-                for (Component line : MagnifyingGlassInspector.buildCompactLines(animal, serverTicks, troughFood)) {
+                boolean wild = accessor.getServerData().getBoolean(WILD_KEY);
+                for (Component line : MagnifyingGlassInspector.buildCompactLines(animal, serverTicks, wild, troughFood)) {
                     tooltip.add(line);
                 }
             }

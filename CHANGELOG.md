@@ -1,3 +1,17 @@
+# 1.2.1
+
+Hoglins can finally put on weight. They were treated as omnivores, which meant their weight cycle paused in the Nether, and anywhere else they turn into zoglins within seconds. They now use the Nether diet like Striders: lava and nylium or netherrack nearby, in the Nether. Hoglins already saved as omnivores in `animaldiets.json` are corrected automatically. (Closes #14)
+
+The Jade tooltip now tells you when an animal is still wild. Previously it could show a full set of habitat checks for a wild animal that wasn't being tracked at all, making it look like it should be gaining weight when it never would. It now shows "Wild — leash or breed it to start tracking weight" until you leash or breed it. (Closes #11)
+
+Picking up a spyglass now unlocks the Magnifying Glass recipe in your recipe book. (Closes #10)
+
+Everything the Magnifying Glass and the Jade tooltip say can now be translated, and animal names in the Magnifying Glass readout show up in your own language. (Closes #12)
+
+Added a Brazilian Portuguese translation, contributed by McThaWeb. (Closes #13)
+
+The loot overlay and the sick tint can now require an item in hand. List item IDs in the new `overlayRequiredItems` option, for example `["animalweights:magnifying_glass"]`, and players only see the floating loot overlay and the green sick tint while holding one of them in either hand. Empty by default, so nothing changes unless you set it. (Closes #15)
+
 # 1.2.0
 
 Added support for Minecraft 26.3 (Fabric and NeoForge).

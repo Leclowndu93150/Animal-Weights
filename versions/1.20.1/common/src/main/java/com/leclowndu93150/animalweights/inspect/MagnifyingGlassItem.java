@@ -35,6 +35,6 @@ public class MagnifyingGlassItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.literal("Right-click an animal to inspect").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("item.animalweights.magnifying_glass.tooltip").withStyle(ChatFormatting.GRAY));
     }
 }

@@ -4,8 +4,10 @@ import com.leclowndu93150.animalweights.AnimalWeightsRules;
 import com.leclowndu93150.animalweights.WeightAttachment;
 import com.leclowndu93150.animalweights.config.AnimalWeightsConfig;
 import com.leclowndu93150.animalweights.config.ConfigManager;
+import com.leclowndu93150.animalweights.display.OverlayVisibility;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
@@ -44,7 +46,7 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, M extend
     private void animalweights$tintSick(EntityModel<T> model, PoseStack pose, VertexConsumer consumer, int packedLight, int overlay, float r, float g, float b, float a) {
         AnimalWeightsConfig cfg = ConfigManager.get();
         LivingEntity entity = animalweights$currentEntity.get();
-        if (cfg.enableSickTint && entity instanceof Animal animal && !AnimalWeightsRules.isDisabled(animal) && AnimalWeightsRules.statsOf(animal).isSick(WeightAttachment.getWeight(animal))) {
+        if (cfg.enableSickTint && entity instanceof Animal animal && !AnimalWeightsRules.isDisabled(animal) && AnimalWeightsRules.statsOf(animal).isSick(WeightAttachment.getWeight(animal)) && OverlayVisibility.holdsRequiredItem(Minecraft.getInstance().player)) {
             int color = cfg.sickTintColor;
             a = ((color >> 24) & 0xFF) / 255.0F;
             r = ((color >> 16) & 0xFF) / 255.0F;

@@ -25,7 +25,8 @@ public final class ConfigManager {
     private static final long SAVE_DEBOUNCE_NANOS = 5_000_000_000L;
     private static final String COMMENT_PREFIX = "_comment";
     private static final Set<String> NETHER_TAGGED = Set.of(
-        "minecraft:strider"
+        "minecraft:strider",
+        "minecraft:hoglin"
     );
     private static final Set<String> DEFAULT_DISABLED = Set.of(
         "minecraft:happy_ghast"
@@ -286,6 +287,8 @@ public final class ConfigManager {
         addValue(out, values, "overlayMode");
         addComment(out, "overlayRange", "Maximum distance in blocks for overlay visibility. Clamped from 1.0 to 64.0.");
         addValue(out, values, "overlayRange");
+        addComment(out, "overlayRequiredItems", "Item IDs the player must hold in either hand to see the floating loot overlay and the sick tint. Leave empty to always show them. Example: [\"animalweights:magnifying_glass\"].");
+        addValue(out, values, "overlayRequiredItems");
 
         addComment(out, "pauseAtNight", "Whether animals pause their weight cycle at night, like sleeping. Possible inputs: true, false.");
         addValue(out, values, "pauseAtNight");
@@ -341,6 +344,7 @@ public final class ConfigManager {
         if (c.entityFilterMode == null) c.entityFilterMode = EntityFilterMode.BLACKLIST;
         if (c.disabledEntities == null) c.disabledEntities = new LinkedHashSet<>();
         if (c.enabledEntities == null) c.enabledEntities = new LinkedHashSet<>();
+        if (c.overlayRequiredItems == null) c.overlayRequiredItems = new LinkedHashSet<>();
         for (String id : NETHER_TAGGED) {
             AnimalProfile existing = c.animalProfiles.get(id);
             if (existing != null && existing.diet != null && existing.diet != Diet.NETHER) {

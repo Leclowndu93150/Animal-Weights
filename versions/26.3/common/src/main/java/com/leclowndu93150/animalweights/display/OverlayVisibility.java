@@ -4,11 +4,16 @@ import com.leclowndu93150.animalweights.config.AnimalWeightsConfig;
 import com.leclowndu93150.animalweights.config.ConfigManager;
 import com.leclowndu93150.animalweights.config.OverlayMode;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
+
+import java.util.Set;
 
 public final class OverlayVisibility {
     private OverlayVisibility() {
@@ -16,6 +21,7 @@ public final class OverlayVisibility {
 
     public static boolean shouldRender(Animal animal, LocalPlayer player) {
         if (player == null) return false;
+        if (!holdsRequiredItem(player)) return false;
         AnimalWeightsConfig cfg = ConfigManager.get();
         OverlayMode mode = cfg.overlayMode;
         if (mode == OverlayMode.ALWAYS) {
@@ -32,6 +38,18 @@ public final class OverlayVisibility {
             case CROUCH_LOOKING -> player.isCrouching() && isLookingAt(player, animal, range);
             default -> true;
         };
+    }
+
+    public static boolean holdsRequiredItem(Player player) {
+        Set<String> required = ConfigManager.get().overlayRequiredItems;
+        if (required.isEmpty()) {
+            return true;
+        }
+        return player != null && (required.contains(itemId(player.getMainHandItem())) || required.contains(itemId(player.getOffhandItem())));
+    }
+
+    private static String itemId(ItemStack stack) {
+        return String.valueOf(BuiltInRegistries.ITEM.getKey(stack.getItem()));
     }
 
     private static boolean isLookingAt(LocalPlayer player, Animal target, double range) {

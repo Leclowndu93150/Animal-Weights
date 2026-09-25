@@ -21,6 +21,7 @@ import java.util.List;
 public final class MagnifyingGlassInspector {
     private static final Component CHECK = Component.literal("✓").withStyle(ChatFormatting.GREEN);
     private static final Component CROSS = Component.literal("✗").withStyle(ChatFormatting.RED);
+    private static final Component SEPARATOR = Component.literal("  ");
 
     private MagnifyingGlassInspector() {
     }
@@ -30,83 +31,89 @@ public final class MagnifyingGlassInspector {
             return List.of();
         }
         if (!AnimalWeightsRules.isActive(animal)) {
-            return List.of(
-                Component.literal(animal.getType().getDescription().getString())
-                    .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD),
-                Component.literal("Wild — leash or breed it to start tracking weight")
-                    .withStyle(ChatFormatting.GRAY)
-            );
+            return List.of(nameLine(animal), wildLine());
         }
         Snapshot s = snapshot(animal, -1, HabitatScanner.hasUsableFeedingTrough(animal));
         List<Component> lines = new ArrayList<>(5);
-        lines.add(Component.literal(animal.getType().getDescription().getString())
-            .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD));
+        lines.add(nameLine(animal));
         lines.add(weightLine(s));
         if (s.sick) {
-            lines.add(Component.literal("Sick — won't breed").withStyle(ChatFormatting.RED));
+            lines.add(sickLine());
         }
         lines.add(checksLine(s));
         lines.add(nextLine(s));
         return lines;
     }
 
-    public static List<Component> buildCompactLines(Animal animal, int elapsedTicksOverride, boolean troughFood) {
+    public static List<Component> buildCompactLines(Animal animal, int elapsedTicksOverride, boolean wild, boolean troughFood) {
         if (AnimalWeightsRules.isDisabled(animal)) {
             return List.of();
         }
-        if (!AnimalWeightsRules.isActive(animal)) {
-            return List.of();
+        if (wild) {
+            return List.of(wildLine());
         }
         Snapshot s = snapshot(animal, elapsedTicksOverride, troughFood);
         List<Component> lines = new ArrayList<>(4);
         lines.add(weightLine(s));
         if (s.sick) {
-            lines.add(Component.literal("Sick — won't breed").withStyle(ChatFormatting.RED));
+            lines.add(sickLine());
         }
         lines.add(checksLine(s));
         lines.add(nextLine(s));
         return lines;
     }
 
+    private static MutableComponent nameLine(Animal animal) {
+        return animal.getType().getDescription().copy().withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
+    }
+
+    private static MutableComponent wildLine() {
+        return Component.translatable("animalweights.inspect.wild").withStyle(ChatFormatting.GRAY);
+    }
+
+    private static MutableComponent sickLine() {
+        return Component.translatable("animalweights.inspect.sick").withStyle(ChatFormatting.RED);
+    }
+
     private static MutableComponent weightLine(Snapshot s) {
-        return Component.literal("Weight ").withStyle(ChatFormatting.GRAY)
-            .append(Component.literal(s.weight + "/" + s.maxWeight).withStyle(ChatFormatting.YELLOW));
+        return Component.translatable("animalweights.inspect.weight",
+            Component.literal(s.weight + "/" + s.maxWeight).withStyle(ChatFormatting.YELLOW)
+        ).withStyle(ChatFormatting.GRAY);
+    }
+
+    private static MutableComponent check(String need, boolean met) {
+        return Component.translatable("animalweights.inspect." + need).withStyle(ChatFormatting.GRAY)
+            .append(" ")
+            .append(met ? CHECK : CROSS);
     }
 
     private static MutableComponent checksLine(Snapshot s) {
-        MutableComponent line = Component.literal("Light ").withStyle(ChatFormatting.GRAY)
-            .append(s.light ? CHECK : CROSS);
+        MutableComponent line = check("light", s.light);
         if (s.diet == Diet.NETHER) {
-            line.append(Component.literal("  Lava ").withStyle(ChatFormatting.GRAY))
-                .append(s.lava ? CHECK : CROSS)
-                .append(Component.literal("  Nylium ").withStyle(ChatFormatting.GRAY))
-                .append(s.netherGround ? CHECK : CROSS);
+            line.append(SEPARATOR).append(check("lava", s.lava))
+                .append(SEPARATOR).append(check("nylium", s.netherGround));
         } else if (s.diet == Diet.AQUATIC) {
-            line.append(Component.literal("  Water ").withStyle(ChatFormatting.GRAY))
-                .append(s.water ? CHECK : CROSS);
+            line.append(SEPARATOR).append(check("water", s.water));
         } else {
-            line.append(Component.literal("  Water ").withStyle(ChatFormatting.GRAY))
-                .append(s.water ? CHECK : CROSS)
-                .append(Component.literal("  Grazing ").withStyle(ChatFormatting.GRAY))
-                .append(s.grazing ? CHECK : CROSS);
+            line.append(SEPARATOR).append(check("water", s.water))
+                .append(SEPARATOR).append(check("grazing", s.grazing));
         }
-        return line.append(Component.literal("  Space ").withStyle(ChatFormatting.GRAY))
-            .append(s.notCrowded ? CHECK : CROSS);
+        return line.append(SEPARATOR).append(check("space", s.notCrowded));
     }
 
     private static MutableComponent nextLine(Snapshot s) {
         if (s.outOfElement) {
-            return Component.literal(s.diet == Diet.NETHER ? "Waiting to return to the Nether" : "Paused in the Nether")
+            return Component.translatable(s.diet == Diet.NETHER ? "animalweights.inspect.waiting_for_nether" : "animalweights.inspect.paused_in_nether")
                 .withStyle(ChatFormatting.DARK_AQUA);
         }
         if (s.sleeping) {
-            return Component.literal("Resting until dawn")
+            return Component.translatable("animalweights.inspect.resting")
                 .withStyle(ChatFormatting.DARK_AQUA);
         }
-        return Component.literal("Next ").withStyle(ChatFormatting.GRAY)
-            .append(Component.literal(s.secondsUntilNext + "s").withStyle(ChatFormatting.WHITE))
-            .append(Component.literal(" → ").withStyle(ChatFormatting.DARK_GRAY))
-            .append(s.outcome);
+        return Component.translatable("animalweights.inspect.next",
+            Component.translatable("animalweights.inspect.seconds", s.secondsUntilNext).withStyle(ChatFormatting.WHITE),
+            s.outcome
+        ).withStyle(ChatFormatting.GRAY);
     }
 
     private static Snapshot snapshot(Animal animal, int elapsedTicksOverride, boolean troughFood) {
@@ -140,15 +147,15 @@ public final class MagnifyingGlassInspector {
 
     private static Component predictOutcome(int score) {
         if (score >= 4) {
-            return Component.literal("gain").withStyle(ChatFormatting.GREEN);
+            return Component.translatable("animalweights.inspect.outcome.gain").withStyle(ChatFormatting.GREEN);
         }
         if (score == 3) {
-            return Component.literal("stable").withStyle(ChatFormatting.WHITE);
+            return Component.translatable("animalweights.inspect.outcome.stable").withStyle(ChatFormatting.WHITE);
         }
         if (score == 2) {
-            return Component.literal("minor loss").withStyle(ChatFormatting.GOLD);
+            return Component.translatable("animalweights.inspect.outcome.minor_loss").withStyle(ChatFormatting.GOLD);
         }
-        return Component.literal("severe loss").withStyle(ChatFormatting.RED);
+        return Component.translatable("animalweights.inspect.outcome.severe_loss").withStyle(ChatFormatting.RED);
     }
 
     private static final class Snapshot {

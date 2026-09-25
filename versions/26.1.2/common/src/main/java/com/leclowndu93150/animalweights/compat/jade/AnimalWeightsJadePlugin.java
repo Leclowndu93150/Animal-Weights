@@ -1,5 +1,6 @@
 package com.leclowndu93150.animalweights.compat.jade;
 
+import com.leclowndu93150.animalweights.AnimalWeightsRules;
 import com.leclowndu93150.animalweights.Animalweights;
 import com.leclowndu93150.animalweights.WeightAttachment;
 import com.leclowndu93150.animalweights.habitat.HabitatScanner;
@@ -23,6 +24,7 @@ public class AnimalWeightsJadePlugin implements IWailaPlugin {
     private static final Identifier UID = Identifier.fromNamespaceAndPath(Animalweights.MOD_ID, "animal_condition");
     private static final String DATA_KEY = "animalweights_ticks_since_eval";
     private static final String TROUGH_KEY = "animalweights_trough_food";
+    private static final String WILD_KEY = "animalweights_wild";
     private static final DataProvider DATA_PROVIDER = new DataProvider();
     private static final ComponentProvider COMPONENT_PROVIDER = new ComponentProvider();
 
@@ -42,6 +44,7 @@ public class AnimalWeightsJadePlugin implements IWailaPlugin {
             if (accessor.getEntity() instanceof Animal animal) {
                 data.putInt(DATA_KEY, WeightAttachment.get(animal).getTicksSinceEvaluation());
                 data.putBoolean(TROUGH_KEY, HabitatScanner.hasUsableFeedingTrough(animal));
+                data.putBoolean(WILD_KEY, !AnimalWeightsRules.isActive(animal));
             }
         }
 
@@ -57,7 +60,8 @@ public class AnimalWeightsJadePlugin implements IWailaPlugin {
             if (accessor.getEntity() instanceof Animal animal) {
                 int serverTicks = accessor.getServerData().getIntOr(DATA_KEY, 0);
                 boolean troughFood = accessor.getServerData().getBooleanOr(TROUGH_KEY, false);
-                for (Component line : MagnifyingGlassInspector.buildCompactLines(animal, serverTicks, troughFood)) {
+                boolean wild = accessor.getServerData().getBooleanOr(WILD_KEY, false);
+                for (Component line : MagnifyingGlassInspector.buildCompactLines(animal, serverTicks, wild, troughFood)) {
                     tooltip.add(line);
                 }
             }
