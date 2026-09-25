@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "com.leclowndu93150"
-version = "1.1.0"
+version = "1.2.0"
 
 prism {
     metadata {
@@ -34,6 +34,26 @@ prism {
     sharedCommon {
         dependencies {
             compileOnly("com.google.code.gson:gson:2.10.1")
+        }
+    }
+
+    version("26.3") {
+        common {
+            compileOnly("curse.maven:jade-324717:8892782")
+        }
+        fabric {
+            loaderVersion = "0.19.5"
+            fabricApi("0.161.0+26.3")
+            dependencies {
+                modRuntimeOnly("curse.maven:jade-324717:8892530")
+            }
+        }
+        neoforge {
+            loaderVersion = "26.3.0.21-beta"
+            loaderVersionRange = "[4,)"
+            dependencies {
+                modRuntimeOnly("curse.maven:jade-324717:8892782")
+            }
         }
     }
 

@@ -1,24 +1,10 @@
 package com.leclowndu93150.animalweights;
 
-import com.leclowndu93150.animalweights.config.AnimalWeightsConfig;
-import com.leclowndu93150.animalweights.config.ConfigManager;
-import net.minecraft.util.Mth;
+import com.leclowndu93150.animalweights.config.WeightStats;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
 public final class WeightData {
-    public static int minWeight() {
-        return ConfigManager.get().minWeight;
-    }
-
-    public static int defaultWeight() {
-        return ConfigManager.get().defaultWeight;
-    }
-
-    public static int maxWeight() {
-        return ConfigManager.get().maxWeight;
-    }
-
     private int weight;
     private int ticksSinceEvaluation;
     private long bonusCacheTick = Long.MIN_VALUE;
@@ -26,13 +12,8 @@ public final class WeightData {
     private boolean naturallySpawned;
     private boolean engaged;
 
-    public WeightData() {
-        this(defaultWeight());
-    }
-
     public WeightData(int weight) {
-        AnimalWeightsConfig cfg = ConfigManager.get();
-        this.weight = Mth.clamp(weight, cfg.minWeight, cfg.maxWeight);
+        this.weight = weight;
     }
 
     public int getWeight() {
@@ -40,8 +21,7 @@ public final class WeightData {
     }
 
     public void setWeight(int weight) {
-        AnimalWeightsConfig cfg = ConfigManager.get();
-        this.weight = Mth.clamp(weight, cfg.minWeight, cfg.maxWeight);
+        this.weight = weight;
     }
 
     public int getTicksSinceEvaluation() {
@@ -92,9 +72,8 @@ public final class WeightData {
         output.putBoolean("engaged", this.engaged);
     }
 
-    public static WeightData load(ValueInput input) {
-        int w = input.getIntOr("weight", defaultWeight());
-        WeightData data = new WeightData(w);
+    public static WeightData load(ValueInput input, WeightStats stats) {
+        WeightData data = new WeightData(stats.clamp(input.getIntOr("weight", stats.defaultWeight())));
         data.ticksSinceEvaluation = Math.max(0, input.getIntOr("ticksSinceEvaluation", 0));
         data.naturallySpawned = input.getBooleanOr("naturallySpawned", false);
         data.engaged = input.getBooleanOr("engaged", false);

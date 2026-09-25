@@ -1,23 +1,9 @@
 package com.leclowndu93150.animalweights;
 
-import com.leclowndu93150.animalweights.config.AnimalWeightsConfig;
-import com.leclowndu93150.animalweights.config.ConfigManager;
+import com.leclowndu93150.animalweights.config.WeightStats;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.util.Mth;
 
 public final class WeightData {
-    public static int minWeight() {
-        return ConfigManager.get().minWeight;
-    }
-
-    public static int defaultWeight() {
-        return ConfigManager.get().defaultWeight;
-    }
-
-    public static int maxWeight() {
-        return ConfigManager.get().maxWeight;
-    }
-
     private int weight;
     private int ticksSinceEvaluation;
     private long bonusCacheTick = Long.MIN_VALUE;
@@ -25,13 +11,8 @@ public final class WeightData {
     private boolean naturallySpawned;
     private boolean engaged;
 
-    public WeightData() {
-        this(defaultWeight());
-    }
-
     public WeightData(int weight) {
-        AnimalWeightsConfig cfg = ConfigManager.get();
-        this.weight = Mth.clamp(weight, cfg.minWeight, cfg.maxWeight);
+        this.weight = weight;
     }
 
     public int getWeight() {
@@ -39,8 +20,7 @@ public final class WeightData {
     }
 
     public void setWeight(int weight) {
-        AnimalWeightsConfig cfg = ConfigManager.get();
-        this.weight = Mth.clamp(weight, cfg.minWeight, cfg.maxWeight);
+        this.weight = weight;
     }
 
     public int getTicksSinceEvaluation() {
@@ -91,9 +71,8 @@ public final class WeightData {
         tag.putBoolean("engaged", this.engaged);
     }
 
-    public static WeightData load(CompoundTag tag) {
-        int w = tag.contains("weight") ? tag.getInt("weight") : defaultWeight();
-        WeightData data = new WeightData(w);
+    public static WeightData load(CompoundTag tag, WeightStats stats) {
+        WeightData data = new WeightData(stats.clamp(tag.contains("weight") ? tag.getInt("weight") : stats.defaultWeight()));
         if (tag.contains("ticksSinceEvaluation")) {
             data.ticksSinceEvaluation = Math.max(0, tag.getInt("ticksSinceEvaluation"));
         }

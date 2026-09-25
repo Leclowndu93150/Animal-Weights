@@ -12,7 +12,7 @@ public final class WeightAttachment {
         WeightHolder holder = (WeightHolder) animal;
         WeightData data = holder.animalweights$getWeightData();
         if (data == null) {
-            data = new WeightData();
+            data = new WeightData(AnimalWeightsRules.statsOf(animal).defaultWeight());
             holder.animalweights$setWeightData(data);
         }
         return data;
@@ -24,10 +24,11 @@ public final class WeightAttachment {
 
     public static void setWeight(Animal animal, int weight) {
         WeightData current = get(animal);
-        if (current.getWeight() == weight) {
+        int clamped = AnimalWeightsRules.statsOf(animal).clamp(weight);
+        if (current.getWeight() == clamped) {
             return;
         }
-        current.setWeight(weight);
+        current.setWeight(clamped);
         syncToTrackers(animal);
     }
 

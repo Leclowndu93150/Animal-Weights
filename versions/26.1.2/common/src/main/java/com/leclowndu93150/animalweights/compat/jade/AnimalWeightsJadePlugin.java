@@ -2,6 +2,7 @@ package com.leclowndu93150.animalweights.compat.jade;
 
 import com.leclowndu93150.animalweights.Animalweights;
 import com.leclowndu93150.animalweights.WeightAttachment;
+import com.leclowndu93150.animalweights.habitat.HabitatScanner;
 import com.leclowndu93150.animalweights.inspect.MagnifyingGlassInspector;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -21,6 +22,7 @@ import snownee.jade.api.config.IPluginConfig;
 public class AnimalWeightsJadePlugin implements IWailaPlugin {
     private static final Identifier UID = Identifier.fromNamespaceAndPath(Animalweights.MOD_ID, "animal_condition");
     private static final String DATA_KEY = "animalweights_ticks_since_eval";
+    private static final String TROUGH_KEY = "animalweights_trough_food";
     private static final DataProvider DATA_PROVIDER = new DataProvider();
     private static final ComponentProvider COMPONENT_PROVIDER = new ComponentProvider();
 
@@ -39,6 +41,7 @@ public class AnimalWeightsJadePlugin implements IWailaPlugin {
         public void appendServerData(CompoundTag data, EntityAccessor accessor) {
             if (accessor.getEntity() instanceof Animal animal) {
                 data.putInt(DATA_KEY, WeightAttachment.get(animal).getTicksSinceEvaluation());
+                data.putBoolean(TROUGH_KEY, HabitatScanner.hasUsableFeedingTrough(animal));
             }
         }
 
@@ -53,7 +56,8 @@ public class AnimalWeightsJadePlugin implements IWailaPlugin {
         public void appendTooltip(ITooltip tooltip, EntityAccessor accessor, IPluginConfig config) {
             if (accessor.getEntity() instanceof Animal animal) {
                 int serverTicks = accessor.getServerData().getIntOr(DATA_KEY, 0);
-                for (Component line : MagnifyingGlassInspector.buildCompactLines(animal, serverTicks)) {
+                boolean troughFood = accessor.getServerData().getBooleanOr(TROUGH_KEY, false);
+                for (Component line : MagnifyingGlassInspector.buildCompactLines(animal, serverTicks, troughFood)) {
                     tooltip.add(line);
                 }
             }

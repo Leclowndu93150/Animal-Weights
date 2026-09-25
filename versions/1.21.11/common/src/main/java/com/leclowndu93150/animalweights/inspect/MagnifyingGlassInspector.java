@@ -5,6 +5,7 @@ import com.leclowndu93150.animalweights.WeightAttachment;
 import com.leclowndu93150.animalweights.config.AnimalWeightsConfig;
 import com.leclowndu93150.animalweights.config.ConfigManager;
 import com.leclowndu93150.animalweights.config.Diet;
+import com.leclowndu93150.animalweights.config.WeightStats;
 import com.leclowndu93150.animalweights.habitat.HabitatScanner;
 import com.leclowndu93150.animalweights.habitat.WeightTickLogic;
 import net.minecraft.ChatFormatting;
@@ -36,7 +37,7 @@ public final class MagnifyingGlassInspector {
                     .withStyle(ChatFormatting.GRAY)
             );
         }
-        Snapshot s = snapshot(animal, -1);
+        Snapshot s = snapshot(animal, -1, HabitatScanner.hasUsableFeedingTrough(animal));
         List<Component> lines = new ArrayList<>(5);
         lines.add(Component.literal(animal.getType().getDescription().getString())
             .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD));
@@ -49,18 +50,14 @@ public final class MagnifyingGlassInspector {
         return lines;
     }
 
-    public static List<Component> buildCompactLines(Animal animal) {
-        return buildCompactLines(animal, -1);
-    }
-
-    public static List<Component> buildCompactLines(Animal animal, int elapsedTicksOverride) {
+    public static List<Component> buildCompactLines(Animal animal, int elapsedTicksOverride, boolean troughFood) {
         if (AnimalWeightsRules.isDisabled(animal)) {
             return List.of();
         }
         if (!AnimalWeightsRules.isActive(animal)) {
             return List.of();
         }
-        Snapshot s = snapshot(animal, elapsedTicksOverride);
+        Snapshot s = snapshot(animal, elapsedTicksOverride, troughFood);
         List<Component> lines = new ArrayList<>(4);
         lines.add(weightLine(s));
         if (s.sick) {
@@ -112,30 +109,27 @@ public final class MagnifyingGlassInspector {
             .append(s.outcome);
     }
 
-    private static Snapshot snapshot(Animal animal, int elapsedTicksOverride) {
+    private static Snapshot snapshot(Animal animal, int elapsedTicksOverride, boolean troughFood) {
         AnimalWeightsConfig cfg = ConfigManager.get();
         Level level = animal.level();
         BlockPos pos = animal.blockPosition();
         Diet diet = AnimalWeightsRules.dietOf(animal);
+        WeightStats stats = AnimalWeightsRules.statsOf(animal);
         Snapshot s = new Snapshot();
         s.diet = diet;
         s.weight = WeightAttachment.getWeight(animal);
-        s.maxWeight = cfg.maxWeight;
-        s.sick = s.weight <= cfg.sickThreshold;
+        s.maxWeight = stats.maxWeight();
+        s.sick = stats.isSick(s.weight);
         s.light = HabitatScanner.hasBrightLight(level, pos);
         s.notCrowded = WeightTickLogic.hasSpace(animal, level, cfg);
-        boolean naturalWater = diet != Diet.NETHER && HabitatScanner.hasWaterNearby(level, pos, cfg.habitatScanRadius);
-        boolean water = naturalWater;
-        if (!naturalWater && diet != Diet.NETHER && cfg.cauldronCountsAsWater) {
-            water = HabitatScanner.findFullWaterCauldronNearby(level, pos, cfg.cauldronScanRadius) != null;
-        }
-        s.water = water;
-        s.grazing = HabitatScanner.hasGrazingNearby(level, pos, cfg.habitatScanRadius);
+        s.water = HabitatScanner.hasUsableNaturalWater(level, pos, diet)
+            || HabitatScanner.findUsableCauldron(level, pos, diet) != null;
+        s.grazing = HabitatScanner.hasGrazingNearby(level, pos, cfg.habitatScanRadius) || troughFood;
         s.lava = diet == Diet.NETHER && HabitatScanner.hasLavaNearby(level, pos, cfg.habitatScanRadius);
         s.netherGround = diet == Diet.NETHER && HabitatScanner.hasNetherGroundNearby(level, pos, cfg.habitatScanRadius);
         s.outOfElement = WeightTickLogic.isOutOfElement(level, diet);
-        int score = WeightTickLogic.scoreHabitat(animal, level, cfg, diet, water);
-        int interval = Math.max(1, cfg.weightTickIntervalTicks);
+        int score = WeightTickLogic.scoreHabitat(animal, level, cfg, diet, s.water, s.grazing);
+        int interval = Math.max(1, stats.weightTickIntervalTicks());
         int elapsed = elapsedTicksOverride >= 0 ? elapsedTicksOverride : WeightAttachment.get(animal).getTicksSinceEvaluation();
         int ticksUntilNext = Math.max(0, interval - elapsed);
         s.secondsUntilNext = ticksUntilNext / 20L;

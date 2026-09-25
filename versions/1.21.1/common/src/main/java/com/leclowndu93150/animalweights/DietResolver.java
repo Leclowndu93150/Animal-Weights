@@ -23,6 +23,7 @@ public final class DietResolver {
     public static final TagKey<EntityType<?>> OMNIVORE = tag("omnivore");
     public static final TagKey<EntityType<?>> AQUATIC = tag("aquatic");
     public static final TagKey<EntityType<?>> NETHER = tag("nether");
+    public static final TagKey<EntityType<?>> LIVESTOCK = TagKey.create(Registries.ENTITY_TYPE, ResourceLocation.fromNamespaceAndPath("animalweights", "livestock"));
 
     private static final Set<MobCategory> AQUATIC_CATEGORIES = EnumSet.of(
         MobCategory.WATER_CREATURE,
@@ -45,6 +46,10 @@ public final class DietResolver {
         if (type.is(HERBIVORE)) return Diet.HERBIVORE;
         if (type.is(OMNIVORE)) return Diet.OMNIVORE;
         return null;
+    }
+
+    public static boolean isLivestock(EntityType<?> type) {
+        return type.builtInRegistryHolder().is(LIVESTOCK);
     }
 
     public static Diet resolveBySpawnBiomes(Entity entity) {

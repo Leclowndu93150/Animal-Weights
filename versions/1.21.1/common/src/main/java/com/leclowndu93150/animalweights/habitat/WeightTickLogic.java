@@ -6,9 +6,9 @@ import com.leclowndu93150.animalweights.WeightData;
 import com.leclowndu93150.animalweights.config.AnimalWeightsConfig;
 import com.leclowndu93150.animalweights.config.ConfigManager;
 import com.leclowndu93150.animalweights.config.Diet;
+import com.leclowndu93150.animalweights.config.WeightStats;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.Mth;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.level.Level;
 
@@ -34,50 +34,59 @@ public final class WeightTickLogic {
             return;
         }
         AnimalWeightsConfig cfg = ConfigManager.get();
+        WeightStats stats = AnimalWeightsRules.statsOf(animal);
         WeightData data = WeightAttachment.get(animal);
         data.incrementTicksSinceEvaluation();
-        if (data.getTicksSinceEvaluation() < cfg.weightTickIntervalTicks) {
+        if (data.getTicksSinceEvaluation() < stats.weightTickIntervalTicks()) {
             return;
         }
         data.resetTicksSinceEvaluation();
 
         BlockPos pos = animal.blockPosition();
-        boolean naturalWater = diet != Diet.NETHER && HabitatScanner.hasWaterNearby(level, pos, cfg.habitatScanRadius);
-        BlockPos cauldronPos = null;
-        if (!naturalWater && diet != Diet.NETHER && cfg.cauldronCountsAsWater) {
-            cauldronPos = HabitatScanner.findFullWaterCauldronNearby(level, pos, cfg.cauldronScanRadius);
-        }
+        boolean naturalWater = HabitatScanner.hasUsableNaturalWater(level, pos, diet);
+        BlockPos cauldronPos = naturalWater ? null : HabitatScanner.findUsableCauldron(level, pos, diet);
         boolean water = naturalWater || cauldronPos != null;
 
-        int score = scoreHabitat(animal, level, cfg, diet, water);
+        boolean grazing = false;
+        BlockPos troughPos = null;
+        if (diet == Diet.HERBIVORE || (diet == Diet.OMNIVORE && !water)) {
+            grazing = HabitatScanner.hasGrazingNearby(level, pos, cfg.habitatScanRadius);
+            if (!grazing) {
+                troughPos = HabitatScanner.findUsableFeedingTrough(animal, level, pos, diet);
+                grazing = troughPos != null;
+            }
+        }
+
+        int score = scoreHabitat(animal, level, cfg, diet, water, grazing);
         int requiredForGain = requiredScoreForGain(diet);
 
         int weight = WeightAttachment.getWeight(animal);
         boolean resistant = cfg.naturalSpawnSicknessResistance && data.isNaturallySpawned();
         if (score >= requiredForGain) {
-            if (animal.getRandom().nextFloat() < cfg.weightGainChance) {
-                weight = Mth.clamp(weight + 1, cfg.minWeight, cfg.maxWeight);
+            if (animal.getRandom().nextFloat() < stats.weightGainChance()) {
+                weight = stats.clamp(weight + 1);
                 if (cauldronPos != null) {
                     HabitatScanner.drainWaterCauldron(level, cauldronPos);
                 }
+                if (troughPos != null) {
+                    HabitatScanner.eatFromFeedingTrough(animal, level, troughPos);
+                }
             }
-        } else if (score == requiredForGain - 1) {
-            // stable
         } else if (score == requiredForGain - 2) {
-            double chance = resistant ? cfg.weightMinorLossChance * 0.5 : cfg.weightMinorLossChance;
+            double chance = resistant ? stats.weightMinorLossChance() * 0.5 : stats.weightMinorLossChance();
             if (animal.getRandom().nextFloat() < chance) {
-                weight = Mth.clamp(weight - 1, cfg.minWeight, cfg.maxWeight);
+                weight = stats.clamp(weight - 1);
             }
-        } else {
-            double chance = resistant ? cfg.weightSevereLossChance * 0.5 : cfg.weightSevereLossChance;
+        } else if (score < requiredForGain - 2) {
+            double chance = resistant ? stats.weightSevereLossChance() * 0.5 : stats.weightSevereLossChance();
             if (animal.getRandom().nextFloat() < chance) {
-                weight = Mth.clamp(weight - 1, cfg.minWeight, cfg.maxWeight);
+                weight = stats.clamp(weight - 1);
             }
         }
         WeightAttachment.setWeight(animal, weight);
     }
 
-    public static int scoreHabitat(Animal animal, Level level, AnimalWeightsConfig cfg, Diet diet, boolean water) {
+    public static int scoreHabitat(Animal animal, Level level, AnimalWeightsConfig cfg, Diet diet, boolean water, boolean grazing) {
         BlockPos pos = animal.blockPosition();
         boolean light = HabitatScanner.hasBrightLight(level, pos);
         boolean space = hasSpace(animal, level, cfg);
@@ -87,7 +96,7 @@ public final class WeightTickLogic {
         switch (diet) {
             case HERBIVORE -> {
                 if (water) score++;
-                if (HabitatScanner.hasGrazingNearby(level, pos, cfg.habitatScanRadius)) score++;
+                if (grazing) score++;
             }
             case CARNIVORE -> {
                 if (water) score++;
@@ -97,7 +106,7 @@ public final class WeightTickLogic {
                 if (water) score += 2;
             }
             case OMNIVORE -> {
-                if (water || HabitatScanner.hasGrazingNearby(level, pos, cfg.habitatScanRadius)) score++;
+                if (water || grazing) score++;
                 score++;
             }
             case NETHER -> {

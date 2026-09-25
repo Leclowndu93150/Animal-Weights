@@ -64,7 +64,7 @@ public abstract class AnimalMixin extends AgeableMob implements WeightHolder {
 
     @Inject(method = "readAdditionalSaveData", at = @At("TAIL"))
     private void animalweights$loadWeight(ValueInput input, CallbackInfo ci) {
-        input.child(ANIMALWEIGHTS_TAG).ifPresent(sub -> this.animalweights$weightData = WeightData.load(sub));
+        input.child(ANIMALWEIGHTS_TAG).ifPresent(sub -> this.animalweights$weightData = WeightData.load(sub, AnimalWeightsRules.statsOf((Animal) (Object) this)));
     }
 
     @Inject(method = "customServerAiStep", at = @At("TAIL"))
@@ -86,7 +86,7 @@ public abstract class AnimalMixin extends AgeableMob implements WeightHolder {
         WeightTickLogic.tick(self, level);
         LootCache.ensureSampled(self, level);
         var cfg = ConfigManager.get();
-        if (cfg.enableSickParticles && WeightAttachment.getWeight(self) <= cfg.sickThreshold && level.getGameTime() % 30 == 0) {
+        if (cfg.enableSickParticles && AnimalWeightsRules.statsOf(self).isSick(WeightAttachment.getWeight(self)) && level.getGameTime() % 30 == 0) {
             level.sendParticles(ParticleTypes.MYCELIUM,
                 self.getX(), self.getY() + self.getBbHeight() * 0.7, self.getZ(),
                 3, 0.25, 0.2, 0.25, 0.0);
@@ -106,7 +106,7 @@ public abstract class AnimalMixin extends AgeableMob implements WeightHolder {
         if (AnimalWeightsRules.isDisabled(self)) {
             return;
         }
-        if (WeightAttachment.getWeight(self) <= ConfigManager.get().sickThreshold) {
+        if (AnimalWeightsRules.statsOf(self).isSick(WeightAttachment.getWeight(self))) {
             cir.setReturnValue(false);
         }
     }

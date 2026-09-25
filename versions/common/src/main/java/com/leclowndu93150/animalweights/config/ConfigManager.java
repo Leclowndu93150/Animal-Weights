@@ -6,24 +6,24 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
-import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
-import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 
 public final class ConfigManager {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     private static final long SAVE_DEBOUNCE_NANOS = 5_000_000_000L;
-    private static final Type DIETS_TYPE = new TypeToken<Map<String, Diet>>() {}.getType();
+    private static final String COMMENT_PREFIX = "_comment";
     private static final Set<String> NETHER_TAGGED = Set.of(
         "minecraft:strider"
     );
@@ -46,6 +46,12 @@ public final class ConfigManager {
 
     public static int generation() {
         return generation;
+    }
+
+    public static WeightStats statsFor(String entityId) {
+        AnimalWeightsConfig config = active;
+        AnimalProfile profile = config.animalProfiles.get(entityId);
+        return profile == null ? config.baseStats() : profile.stats(config);
     }
 
     public static void scheduleSave() {
@@ -93,10 +99,12 @@ public final class ConfigManager {
     private static void load() {
         BiConsumer<String, Throwable> errorLogger = activeErrorLogger;
         AnimalWeightsConfig parsed = null;
+        JsonObject json = null;
         try {
             if (Files.exists(activePath)) {
                 try (Reader r = Files.newBufferedReader(activePath)) {
-                    JsonObject json = JsonParser.parseReader(r).getAsJsonObject();
+                    json = JsonParser.parseReader(r).getAsJsonObject();
+                    ConfigMigrations.migrateMainConfig(json);
                     parsed = GSON.fromJson(json, AnimalWeightsConfig.class);
                 } catch (JsonSyntaxException | IllegalStateException e) {
                     errorLogger.accept("animalweights.json is invalid, using defaults", e);
@@ -109,9 +117,8 @@ public final class ConfigManager {
             parsed = new AnimalWeightsConfig();
         }
 
-        // Load diets from separate cache file.
-        // On first run after the split, migrate whatever GSON read from the old main config.
-        parsed.entityDiets = loadDietsCache(parsed.entityDiets, errorLogger);
+        JsonElement legacyDiets = json != null ? json.get("entityDiets") : null;
+        parsed.animalProfiles = loadProfiles(legacyDiets, errorLogger);
 
         active = sanitize(parsed);
         generation++;
@@ -119,16 +126,41 @@ public final class ConfigManager {
         saveDietsCache();
     }
 
-    private static Map<String, Diet> loadDietsCache(Map<String, Diet> migrationFallback, BiConsumer<String, Throwable> errorLogger) {
+    private static Map<String, AnimalProfile> loadProfiles(JsonElement legacyDiets, BiConsumer<String, Throwable> errorLogger) {
         if (Files.exists(dietsCachePath)) {
             try (Reader r = Files.newBufferedReader(dietsCachePath)) {
-                Map<String, Diet> loaded = GSON.fromJson(r, DIETS_TYPE);
-                return loaded != null ? loaded : new HashMap<>();
+                return parseProfiles(JsonParser.parseReader(r), errorLogger);
             } catch (JsonSyntaxException | IllegalStateException | IOException e) {
                 errorLogger.accept("animaldiets.json is invalid, using empty cache", e);
+                return new ConcurrentHashMap<>();
             }
         }
-        return migrationFallback != null ? migrationFallback : new HashMap<>();
+        return parseProfiles(legacyDiets, errorLogger);
+    }
+
+    private static Map<String, AnimalProfile> parseProfiles(JsonElement root, BiConsumer<String, Throwable> errorLogger) {
+        Map<String, AnimalProfile> profiles = new ConcurrentHashMap<>();
+        if (root == null || !root.isJsonObject()) {
+            return profiles;
+        }
+        for (Map.Entry<String, JsonElement> entry : root.getAsJsonObject().entrySet()) {
+            if (entry.getKey().startsWith(COMMENT_PREFIX)) {
+                continue;
+            }
+            JsonObject migrated = ConfigMigrations.migrateProfileEntry(entry.getValue());
+            if (migrated == null) {
+                continue;
+            }
+            try {
+                AnimalProfile profile = GSON.fromJson(migrated, AnimalProfile.class);
+                if (profile != null) {
+                    profiles.put(entry.getKey(), profile);
+                }
+            } catch (JsonSyntaxException e) {
+                errorLogger.accept("animaldiets.json entry " + entry.getKey() + " is invalid, skipping it", e);
+            }
+        }
+        return profiles;
     }
 
     private static void saveMainConfig() {
@@ -152,16 +184,37 @@ public final class ConfigManager {
         try {
             Files.createDirectories(dietsCachePath.getParent());
             try (Writer w = Files.newBufferedWriter(dietsCachePath)) {
-                GSON.toJson(active.entityDiets, w);
+                GSON.toJson(commentedProfiles(active.animalProfiles), w);
             }
         } catch (IOException e) {
             activeErrorLogger.accept("Failed to save animaldiets.json", e);
         }
     }
 
+    private static JsonObject commentedProfiles(Map<String, AnimalProfile> profiles) {
+        JsonObject out = new JsonObject();
+        out.addProperty(COMMENT_PREFIX, "One entry per animal, keyed by entity ID (e.g. \"minecraft:cow\"). New animals are added with their detected diet the first time they are seen. Every key inside an entry is optional: anything left out uses the value from animalweights.json. Example: \"minecraft:strider\": {\"diet\": \"NETHER\", \"maxWeight\": 4, \"weightGainChance\": 0.25}.");
+        addComment(out, "diet", "What the animal needs nearby to gain weight, on top of light and open space. HERBIVORE: water and grazing ground. CARNIVORE: water. OMNIVORE: water or grazing ground. AQUATIC: water. NETHER: lava and nylium or netherrack (light is optional), and it only gains weight in the Nether unless netherAnimalsGainAnywhere is on. Leave it out to let the mod detect it. Possible inputs: HERBIVORE, CARNIVORE, OMNIVORE, AQUATIC, NETHER.");
+        addComment(out, "minWeight", "Lowest weight this animal can drop to. Whole number, 0 or higher.");
+        addComment(out, "maxWeight", "Highest weight this animal can reach. Higher weight means more drops and XP. Whole number, at least minWeight + 1.");
+        addComment(out, "defaultWeight", "Weight this animal starts at. Whole number between minWeight and maxWeight.");
+        addComment(out, "sickThreshold", "At or below this weight the animal is sick: it gets a tint and particles, and cannot breed. Whole number.");
+        addComment(out, "weightTickIntervalTicks", "How often this animal's weight is rechecked, in game ticks. 20 ticks = 1 second. Minimum 20.");
+        addComment(out, "weightGainChance", "Chance from 0.0 to 1.0 for this animal to gain weight when its habitat is good.");
+        addComment(out, "weightMinorLossChance", "Chance from 0.0 to 1.0 for this animal to lose weight when its habitat is poor.");
+        addComment(out, "weightSevereLossChance", "Chance from 0.0 to 1.0 for this animal to lose weight when its habitat is very poor.");
+        for (Map.Entry<String, AnimalProfile> entry : new TreeMap<>(profiles).entrySet()) {
+            out.add(entry.getKey(), GSON.toJsonTree(entry.getValue()));
+        }
+        return out;
+    }
+
     private static JsonObject commentedConfig(AnimalWeightsConfig config) {
         JsonObject values = GSON.toJsonTree(config).getAsJsonObject();
         JsonObject out = new JsonObject();
+
+        addComment(out, "configVersion", "Config format version. Used to upgrade older configs automatically when a new version of the mod changes the format. Do not edit.");
+        addValue(out, values, "configVersion");
 
         addComment(out, "dropScalingMode", "How animal weight changes loot drops. Possible inputs: MULTIPLICATIVE, ADDITIVE.");
         addValue(out, values, "dropScalingMode");
@@ -174,6 +227,8 @@ public final class ConfigManager {
         addValue(out, values, "defaultWeight");
         addComment(out, "maxWeight", "Highest weight an animal can reach.");
         addValue(out, values, "maxWeight");
+        addComment(out, "sickThreshold", "Animals at or below this weight are sick: they get a tint and particles, and cannot breed.");
+        addValue(out, values, "sickThreshold");
 
         addComment(out, "weightTickIntervalTicks", "How often animal weights are rechecked, in game ticks. 20 ticks = 1 second.");
         addValue(out, values, "weightTickIntervalTicks");
@@ -211,10 +266,12 @@ public final class ConfigManager {
         addValue(out, values, "requireEngagement");
         addComment(out, "naturalSpawnSicknessResistance", "Whether naturally-spawned animals (from chunk gen, structures, patrols) are more resistant to losing weight from a bad habitat. Halves the chance of every weight-loss roll. Bred animals, eggs, and spawners are unaffected. Possible inputs: true, false.");
         addValue(out, values, "naturalSpawnSicknessResistance");
-        addComment(out, "cauldronCountsAsWater", "Whether a water cauldron near an animal satisfies the water habitat requirement. Each successful weight gain that relied on a cauldron drains one fill level; an empty cauldron must be refilled by hand. Lets you keep livestock in the Nether or anywhere away from natural water. Possible inputs: true, false.");
-        addValue(out, values, "cauldronCountsAsWater");
-        addComment(out, "cauldronScanRadius", "Radius in blocks used to find a water cauldron around the animal. Defaults to 8 (larger than habitatScanRadius) so one cauldron covers a small barn.");
-        addValue(out, values, "cauldronScanRadius");
+        addComment(out, "waterSource", "What counts as water for the water habitat requirement. ANY: natural water or a water cauldron. NATURAL_ONLY: only water blocks, cauldrons are ignored. CAULDRON_ONLY: only water cauldrons, water blocks are ignored (AQUATIC animals still use the water they live in). Each successful weight gain that relied on a cauldron drains one fill level; an empty cauldron must be refilled by hand. Possible inputs: ANY, NATURAL_ONLY, CAULDRON_ONLY.");
+        addValue(out, values, "waterSource");
+        addComment(out, "feedingTroughCountsAsGrazing", "Whether a feeding trough from the Animal Feeding Trough mod that holds food the animal eats satisfies the grazing requirement. Each successful weight gain that relied on a trough eats one item from it. Has no effect without that mod. Possible inputs: true, false.");
+        addValue(out, values, "feedingTroughCountsAsGrazing");
+        addComment(out, "feederScanRadius", "Radius in blocks used to find a water cauldron or feeding trough around the animal. Defaults to 8 (larger than habitatScanRadius) so one cauldron or trough covers a small barn.");
+        addValue(out, values, "feederScanRadius");
 
         addComment(out, "enableSickTint", "Whether sick animals get a green tint. Possible inputs: true, false.");
         addValue(out, values, "enableSickTint");
@@ -237,18 +294,19 @@ public final class ConfigManager {
 
         addComment(out, "defaultDiet", "Diet used for animals not listed in animaldiets.json (modded animals). Possible inputs: HERBIVORE, CARNIVORE, OMNIVORE, AQUATIC, NETHER.");
         addValue(out, values, "defaultDiet");
-        addComment(out, "entityFilterMode", "How the mod decides which entities to track. BLACKLIST: every Animal is tracked except those in disabledEntities. WHITELIST: only entities in enabledEntities are tracked. VANILLA_ONLY: track only minecraft: entities (plus anything in enabledEntities, minus anything in disabledEntities). Possible inputs: BLACKLIST, WHITELIST, VANILLA_ONLY.");
+        addComment(out, "animaldiets", "Per-animal diets and stat overrides live in animaldiets.json. The comments at the top of that file explain every option.");
+        addComment(out, "entityFilterMode", "How the mod decides which entities to track. BLACKLIST: every Animal is tracked except those in disabledEntities. WHITELIST: only entities in enabledEntities are tracked. VANILLA_ONLY: track only minecraft: entities (plus anything in enabledEntities, minus anything in disabledEntities). LIVESTOCK: track only farm animals in the animalweights:livestock entity tag (cow, mooshroom, pig, sheep, chicken, goat, rabbit; extend it with a datapack), plus anything in enabledEntities, minus anything in disabledEntities. Possible inputs: BLACKLIST, WHITELIST, VANILLA_ONLY, LIVESTOCK.");
         addValue(out, values, "entityFilterMode");
-        addComment(out, "disabledEntities", "Entity type IDs (e.g. \"quark:shiba\") fully ignored by the mod: no weight tracking, no drop scaling, no sick tint, no breeding block, no tooltip. Used in BLACKLIST and VANILLA_ONLY modes.");
+        addComment(out, "disabledEntities", "Entity type IDs (e.g. \"quark:shiba\") fully ignored by the mod: no weight tracking, no drop scaling, no sick tint, no breeding block, no tooltip. Used in BLACKLIST, VANILLA_ONLY and LIVESTOCK modes.");
         addValue(out, values, "disabledEntities");
-        addComment(out, "enabledEntities", "Entity type IDs that the mod tracks. Used in WHITELIST mode (only these are tracked) and as an extra opt-in list in VANILLA_ONLY mode. Example: [\"minecraft:cow\", \"minecraft:pig\", \"minecraft:chicken\"].");
+        addComment(out, "enabledEntities", "Entity type IDs that the mod tracks. Used in WHITELIST mode (only these are tracked) and as an extra opt-in list in VANILLA_ONLY and LIVESTOCK modes. Example: [\"minecraft:cow\", \"minecraft:pig\", \"minecraft:chicken\"].");
         addValue(out, values, "enabledEntities");
 
         return out;
     }
 
     private static void addComment(JsonObject object, String key, String text) {
-        object.addProperty("_comment_" + key, text);
+        object.addProperty(COMMENT_PREFIX + "_" + key, text);
     }
 
     private static void addValue(JsonObject object, JsonObject values, String key) {
@@ -270,22 +328,23 @@ public final class ConfigManager {
         if (c.crowdRadius < 1) c.crowdRadius = 1;
         if (c.crowdLimit < 1) c.crowdLimit = 1;
         if (c.minOpenSpace < 0) c.minOpenSpace = 0;
-        if (c.grazingBlocks == null) c.grazingBlocks = new java.util.LinkedHashSet<>();
-        if (c.grazingBlockTags == null) c.grazingBlockTags = new java.util.LinkedHashSet<>();
+        if (c.grazingBlocks == null) c.grazingBlocks = new LinkedHashSet<>();
+        if (c.grazingBlockTags == null) c.grazingBlockTags = new LinkedHashSet<>();
         if (c.proximityRadius < 1) c.proximityRadius = 1;
-        if (c.cauldronScanRadius < 1) c.cauldronScanRadius = 1;
-        if (c.cauldronScanRadius > 32) c.cauldronScanRadius = 32;
+        if (c.waterSource == null) c.waterSource = WaterSource.ANY;
+        if (c.feederScanRadius < 1) c.feederScanRadius = 1;
+        if (c.feederScanRadius > 32) c.feederScanRadius = 32;
         if (c.lightThreshold < 0) c.lightThreshold = 0;
         if (c.lightThreshold > 15) c.lightThreshold = 15;
         if (c.defaultDiet == null) c.defaultDiet = Diet.OMNIVORE;
-        if (c.entityDiets == null) c.entityDiets = new HashMap<>();
+        if (c.animalProfiles == null) c.animalProfiles = new ConcurrentHashMap<>();
         if (c.entityFilterMode == null) c.entityFilterMode = EntityFilterMode.BLACKLIST;
-        if (c.disabledEntities == null) c.disabledEntities = new java.util.LinkedHashSet<>();
-        if (c.enabledEntities == null) c.enabledEntities = new java.util.LinkedHashSet<>();
+        if (c.disabledEntities == null) c.disabledEntities = new LinkedHashSet<>();
+        if (c.enabledEntities == null) c.enabledEntities = new LinkedHashSet<>();
         for (String id : NETHER_TAGGED) {
-            Diet existing = c.entityDiets.get(id);
-            if (existing != null && existing != Diet.NETHER) {
-                c.entityDiets.put(id, Diet.NETHER);
+            AnimalProfile existing = c.animalProfiles.get(id);
+            if (existing != null && existing.diet != null && existing.diet != Diet.NETHER) {
+                existing.diet = Diet.NETHER;
             }
         }
         c.disabledEntities.addAll(DEFAULT_DISABLED);

@@ -1,11 +1,13 @@
 package com.leclowndu93150.animalweights.config;
 
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class AnimalWeightsConfig {
+    public int configVersion = ConfigMigrations.CURRENT_VERSION;
+
     public ScalingMode dropScalingMode = ScalingMode.MULTIPLICATIVE;
     public ScalingMode xpScalingMode = ScalingMode.MULTIPLICATIVE;
 
@@ -35,8 +37,9 @@ public final class AnimalWeightsConfig {
 
     public boolean requireEngagement = true;
     public boolean naturalSpawnSicknessResistance = true;
-    public boolean cauldronCountsAsWater = true;
-    public int cauldronScanRadius = 8;
+    public WaterSource waterSource = WaterSource.ANY;
+    public boolean feedingTroughCountsAsGrazing = true;
+    public int feederScanRadius = 8;
 
     public boolean enableSickTint = true;
     public boolean enableSickParticles = true;
@@ -50,12 +53,23 @@ public final class AnimalWeightsConfig {
     public boolean netherAnimalsGainAnywhere = false;
 
     public Diet defaultDiet = Diet.OMNIVORE;
-    public Map<String, Diet> entityDiets = new HashMap<>();
+    public transient Map<String, AnimalProfile> animalProfiles = new ConcurrentHashMap<>();
 
     public EntityFilterMode entityFilterMode = EntityFilterMode.BLACKLIST;
     public Set<String> disabledEntities = new LinkedHashSet<>();
     public Set<String> enabledEntities = new LinkedHashSet<>();
 
+    private transient WeightStats baseStats;
+
     public AnimalWeightsConfig() {
+    }
+
+    WeightStats baseStats() {
+        WeightStats resolved = this.baseStats;
+        if (resolved == null) {
+            resolved = WeightStats.of(this, AnimalProfile.EMPTY);
+            this.baseStats = resolved;
+        }
+        return resolved;
     }
 }

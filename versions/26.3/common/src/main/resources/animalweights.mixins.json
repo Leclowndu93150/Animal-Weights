@@ -1,0 +1,21 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.leclowndu93150.animalweights.mixin",
+  "compatibilityLevel": "JAVA_${java_version}",
+  "mixins": [
+    "AnimalMixin",
+    "LivingEntityDropMixin",
+    "LivingEntityRemoveMixin",
+    "MobMixin"
+  ],
+  "client": [
+    "LevelRendererMixin",
+    "LivingEntityRenderStateMixin",
+    "LivingEntityRendererMixin"
+  ],
+  "server": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
