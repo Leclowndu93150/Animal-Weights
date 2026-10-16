@@ -5,6 +5,8 @@ import com.leclowndu93150.animalweights.WeightAttachment;
 import com.leclowndu93150.animalweights.config.AnimalWeightsConfig;
 import com.leclowndu93150.animalweights.config.ConfigManager;
 import com.leclowndu93150.animalweights.display.OverlayVisibility;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
@@ -16,7 +18,6 @@ import net.minecraft.world.entity.animal.Animal;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(LivingEntityRenderer.class)
@@ -39,11 +40,11 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, M extend
         animalweights$currentEntity.remove();
     }
 
-    @Redirect(
+    @WrapOperation(
         method = "render(Lnet/minecraft/world/entity/LivingEntity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;IIFFFF)V")
     )
-    private void animalweights$tintSick(EntityModel<T> model, PoseStack pose, VertexConsumer consumer, int packedLight, int overlay, float r, float g, float b, float a) {
+    private void animalweights$tintSick(EntityModel<T> model, PoseStack pose, VertexConsumer consumer, int packedLight, int overlay, float r, float g, float b, float a, Operation<Void> original) {
         AnimalWeightsConfig cfg = ConfigManager.get();
         LivingEntity entity = animalweights$currentEntity.get();
         if (cfg.enableSickTint && entity instanceof Animal animal && !AnimalWeightsRules.isDisabled(animal) && AnimalWeightsRules.statsOf(animal).isSick(WeightAttachment.getWeight(animal)) && OverlayVisibility.holdsRequiredItem(Minecraft.getInstance().player)) {
@@ -53,6 +54,6 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, M extend
             g = ((color >> 8) & 0xFF) / 255.0F;
             b = (color & 0xFF) / 255.0F;
         }
-        model.renderToBuffer(pose, consumer, packedLight, overlay, r, g, b, a);
+        original.call(model, pose, consumer, packedLight, overlay, r, g, b, a);
     }
 }

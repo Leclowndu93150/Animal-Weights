@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "com.leclowndu93150"
-version = "1.2.2"
+version = "1.2.3"
 
 prism {
     metadata {
@@ -119,6 +119,7 @@ prism {
 
     version("1.21.1") {
         common {
+            compileOnly("io.github.llamalad7:mixinextras-common:0.3.5")
             compileOnly("curse.maven:jade-324717:7545219")
         }
         fabric {
@@ -139,6 +140,7 @@ prism {
 
     version("1.20.1") {
         common {
+            compileOnly("io.github.llamalad7:mixinextras-common:0.3.5")
             modCompileOnly("curse.maven:jade-324717:6855440")
         }
         fabric {
